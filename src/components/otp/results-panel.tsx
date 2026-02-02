@@ -18,7 +18,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PromiseResponse } from '@/lib/api/otp-client';
+import { PromiseResponse } from '@/lib/api/otpClient';
 
 interface ResultsPanelProps {
   result: PromiseResponse | null;
@@ -180,18 +180,46 @@ export function ResultsPanel({ result, isLoading }: ResultsPanelProps) {
   }
 
   if (result.status !== 'OK') {
+    const fallbackMessage =
+      result.blockers?.[0] || result.reasons?.[0] || result.error_detail || result.error || 'Promise requires review.';
+
     return (
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-red-800">Evaluation Error</p>
-              <p className="text-xs text-red-700 mt-1">
-                {result.error_detail || result.error || 'An error occurred'}
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-amber-800">Promise needs review</p>
+              <p className="text-xs text-amber-700">
+                {result.promise_date
+                  ? `Promise date: ${safeFormatDate(result.promise_date, 'MMM dd, yyyy')}`
+                  : 'Cannot promise: Insufficient supply for one or more items.'}
               </p>
+
+              {result.reasons?.length ? (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-amber-700/80">Calculation Details</p>
+                  <ul className="text-xs text-amber-700 list-disc pl-4 space-y-1">
+                    {result.reasons.map((reason, index) => (
+                      <li key={`reason-${index}`}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {result.blockers?.length ? (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-amber-700/80">Supply Issues</p>
+                  <ul className="text-xs text-amber-700 list-disc pl-4 space-y-1">
+                    {result.blockers.map((blocker, index) => (
+                      <li key={`blocker-${index}`}>{blocker}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               {result.desired_date_mode === 'STRICT_FAIL' && (
-                <p className="text-xs text-red-700 mt-2">
+                <p className="text-xs text-amber-700">
                   This order cannot be fulfilled by the desired date under the selected policy.
                 </p>
               )}
@@ -203,6 +231,16 @@ export function ResultsPanel({ result, isLoading }: ResultsPanelProps) {
   }
 
   const promiseDateFull = safeFormatDate(result.promise_date, 'MMMM dd, yyyy', 'Unavailable');
+  const availabilityRows = (result.plan || []).map((plan) => {
+    const fulfilled = (plan.fulfillment || []).reduce((sum, entry) => sum + (entry.qty || 0), 0);
+    const shortage = plan.shortage ?? Math.max(0, (plan.qty_required || 0) - fulfilled);
+    return {
+      item_code: plan.item_code,
+      required: plan.qty_required || 0,
+      fulfilled,
+      shortage,
+    };
+  });
 
   return (
     <div className="space-y-4">
@@ -267,6 +305,26 @@ export function ResultsPanel({ result, isLoading }: ResultsPanelProps) {
           <p className="text-sm font-semibold text-slate-800">{derived?.deliveryMode}</p>
           <p className="text-sm text-slate-600 mt-1">{derived?.deliveryModeCopy}</p>
         </div>
+
+        {availabilityRows.length > 0 && (
+          <div className="mt-5 border border-slate-200 rounded-lg overflow-hidden">
+            <div className="bg-slate-50 px-4 py-2">
+              <p className="text-xs uppercase font-semibold text-slate-500">Availability Summary</p>
+            </div>
+            <div className="divide-y divide-slate-200">
+              {availabilityRows.map((row) => (
+                <div key={row.item_code} className="grid grid-cols-4 gap-3 px-4 py-2 text-sm">
+                  <div className="font-medium text-slate-800 truncate">{row.item_code}</div>
+                  <div className="text-slate-600">Required: {row.required}</div>
+                  <div className="text-slate-600">Fulfilled: {row.fulfilled}</div>
+                  <div className={row.shortage > 0 ? "text-amber-700" : "text-green-700"}>
+                    Shortage: {row.shortage}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </motion.div>
 
       <motion.div

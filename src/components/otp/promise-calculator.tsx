@@ -1,13 +1,31 @@
 'use client';
 
+/**
+ * Promise Calculator - OTP Frontend State Model & Endpoints
+ * 
+ * STATE ARCHITECTURE:
+ * - Maintains TWO separate form drafts: manualDraft (Manual Order) + fromSoDraft (From Sales Order)
+ * - Switching input modes does NOT overwrite the other draft
+ * - Each mode has isolated: customer, items[], delivery settings
+ * 
+ * BACKEND ENDPOINTS:
+ * - GET /otp/sales-orders?limit&offset&search → list of Sales Orders
+ * - GET /otp/sales-orders/{id} → full details with items[], defaults{}
+ * - POST /otp/promise → evaluate promise, returns promise_date, confidence, status, plan[]
+ * 
+ * WEEKEND: Friday + Saturday (Israel workweek: Sun-Thu)
+ * WAREHOUSES: Stores-SD, Goods In Transit-SD, Finished Goods-SD, Work In Progress-SD, All Warehouses-SD
+ * STATUS LOGIC: Feasible (OK + promise exists), At Risk (LOW confidence), Not Feasible (CANNOT_FULFILL or no date)
+ */
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { InputPanel } from './input-panel';
-import { ResultsPanel } from './results-panel';
+import { OtpResultPanel } from './result/OtpResultPanel';
 import { motion } from 'framer-motion';
-import { otpApiClient, PromiseRequest, PromiseResponse } from '@/lib/api/otp-client';
+import { otpClient, PromiseRequest, PromiseResponse } from '@/lib/api/otpClient';
 
 // Validation schema
 const promiseFormSchema = z.object({
@@ -25,9 +43,11 @@ const promiseFormSchema = z.object({
     .min(1, 'At least one item is required'),
   desiredDeliveryDate: z.string().default(''),
   deliveryMode: z.enum(['LATEST_ACCEPTABLE', 'NO_EARLY_DELIVERY', 'STRICT_FAIL']).default('LATEST_ACCEPTABLE'),
+  noWeekends: z.boolean().default(true),
   cutoffTime: z.string().default('14:00'),
   cutoffTimezone: z.string().default('UTC'),
   bufferDays: z.number().default(1),
+  defaultWarehouse: z.string().default('Stores - SD'),
 });
 
 type PromiseFormValues = any;
@@ -42,18 +62,27 @@ export function PromiseCalculator() {
   const [result, setResult] = useState<PromiseResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const clearResults = () => {
+    setResult(null);
+    setError(null);
+  };
 
   const form = useForm<any>({
     resolver: zodResolver(promiseFormSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       salesOrderId: '',
       customer: '',
       items: [{ item_code: '', qty: 1, warehouse: 'Stores - SD' }],
       desiredDeliveryDate: '',
       deliveryMode: 'LATEST_ACCEPTABLE',
+      noWeekends: true,
       cutoffTime: '14:00',
       cutoffTimezone: 'UTC',
       bufferDays: 1,
+      defaultWarehouse: 'Stores - SD',
     },
   });
 
@@ -74,7 +103,7 @@ export function PromiseCalculator() {
         })),
         desired_date: data.desiredDeliveryDate || undefined,
         rules: {
-          no_weekends: true,
+          no_weekends: data.noWeekends,
           cutoff_time: data.cutoffTime,
           timezone: data.cutoffTimezone,
           lead_time_buffer_days: data.bufferDays,
@@ -87,7 +116,7 @@ export function PromiseCalculator() {
       // sales_order_id already set if provided
 
       // Call API
-      const response = await otpApiClient.evaluatePromise(request);
+      const response = await otpClient.evaluatePromise(request);
 
       // Store in audit history
       const auditRecord = {
@@ -141,10 +170,10 @@ export function PromiseCalculator() {
       {/* Main Layout: 2-Column */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column: Inputs */}
-        <InputPanel form={form} onSubmit={onSubmit} isLoading={isLoading} />
+        <InputPanel form={form} onSubmit={onSubmit} isLoading={isLoading} onClearResults={clearResults} />
 
         {/* Right Column: Results */}
-        <ResultsPanel result={result} isLoading={isLoading} />
+        <OtpResultPanel result={result} isLoading={isLoading} />
       </div>
     </div>
   );

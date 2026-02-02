@@ -210,8 +210,47 @@ export interface SalesOrder {
   so_date?: string                           // SO creation date
 }
 
+// ============================================================================
+// SALES ORDER LIST & DETAILS (GET /otp/sales-orders)
+// ============================================================================
+
+export interface SalesOrderListItem {
+  name: string                               // SO ID (e.g., "SAL-ORD-2026-00015")
+  customer?: string                          // Customer name (legacy)
+  customer_name?: string                     // Customer name (preferred)
+  status?: string                            // Draft | Submitted | Cancelled
+  transaction_date?: string                  // SO transaction date (YYYY-MM-DD)
+  delivery_date?: string                     // Expected/desired delivery date
+  item_count?: number                        // Number of line items
+  total_qty?: number                         // Total quantity across all items
+}
+
+export interface SalesOrderDetailItem {
+  item_code?: string
+  qty?: number
+  warehouse?: string
+}
+
+export interface SalesOrderDefaults {
+  warehouse?: string
+  no_weekends?: boolean
+  cutoff_time?: string
+  delivery_mode?: DeliveryMode
+}
+
+export interface SalesOrderDetailsResponse {
+  name?: string
+  sales_order_id?: string
+  customer?: string
+  customer_name?: string
+  transaction_date?: string
+  delivery_date?: string
+  items?: SalesOrderDetailItem[]
+  defaults?: SalesOrderDefaults
+}
+
 export interface SalesOrderListResponse {
-  sales_orders: SalesOrder[]
+  sales_orders: SalesOrderListItem[]
   total: number
   limit: number
   offset?: number

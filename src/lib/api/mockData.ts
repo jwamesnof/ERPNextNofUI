@@ -28,6 +28,8 @@ export const MOCK_ITEMS = [
   { item_code: "SKU005", name: "Part D", qty: 15 },
 ]
 
+export const MOCK_ITEM_CODES = MOCK_ITEMS.map((item) => item.item_code)
+
 export const MOCK_PROMISE_RESPONSE_SUCCESS: PromiseEvaluateResponse = {
   status: "OK",
   promise_date: "2026-02-10",

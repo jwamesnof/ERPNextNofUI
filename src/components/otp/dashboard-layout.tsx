@@ -7,7 +7,7 @@ import { AuditTrace } from '@/components/otp/audit-trace';
 import { Settings } from '@/components/otp/settings';
 import { Calculator, BarChart3, History, Settings as SettingsIcon, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { otpApiClient } from '@/lib/api/otp-client';
+import { otpClient } from '@/lib/api/otpClient';
 
 type Page = 'calculator' | 'scenarios' | 'audit' | 'settings';
 
@@ -42,7 +42,7 @@ export function OTPDashboard() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        await otpApiClient.checkHealth();
+        await otpClient.checkHealth();
         setApiStatus('healthy');
         setLastSync(new Date().toLocaleTimeString());
       } catch {
@@ -168,16 +168,21 @@ export function OTPDashboard() {
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${
               apiStatus === 'healthy'
-                ? 'bg-green-50 border-green-200 text-green-700'
+                ? otpClient.getBaseUrlWarning()
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-green-50 border-green-200 text-green-700'
                 : apiStatus === 'offline'
                   ? 'bg-red-50 border-red-200 text-red-700'
                   : 'bg-slate-100 border-slate-200 text-slate-600'
             }`}
+            title={otpClient.getBaseUrlWarning() || undefined}
           >
             <div
               className={`w-2 h-2 rounded-full ${
                 apiStatus === 'healthy'
-                  ? 'bg-green-600'
+                  ? otpClient.getBaseUrlWarning()
+                    ? 'bg-amber-600'
+                    : 'bg-green-600'
                   : apiStatus === 'offline'
                     ? 'bg-red-600'
                     : 'bg-slate-400'
@@ -185,7 +190,7 @@ export function OTPDashboard() {
             />
             <span>
               {apiStatus === 'healthy'
-                ? `API: ${otpApiClient.getBaseUrl().replace('http://', '')}`
+                ? `API: ${otpClient.getBaseUrl().replace('http://', '')}`
                 : apiStatus === 'offline'
                   ? 'Backend Offline'
                   : 'Checking...'}

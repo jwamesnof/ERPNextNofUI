@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, AlertCircle, CheckCircle, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { WEEKEND_DAYS } from './OrderForm';
 
 interface SettingsState {
   apiBaseUrl: string;
   mockMode: boolean;
   weekStart: number; // 0 = Sunday
-  weekEnd: number; // 4 = Thursday
+  weekEnd: number; // 4 = Thursday (Israel workweek ends on Thursday)
   cutoffTime: string; // "14:00"
   cutoffTimezone: string; // "UTC"
   defaultWarehouse: string;
@@ -19,8 +20,8 @@ export function Settings() {
   const [settings, setSettings] = useState<SettingsState>({
     apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8001',
     mockMode: process.env.NEXT_PUBLIC_MOCK_MODE === 'true',
-    weekStart: 0,
-    weekEnd: 4,
+    weekStart: 0, // Sunday
+    weekEnd: 4,   // Thursday (Israel workweek)
     cutoffTime: '14:00',
     cutoffTimezone: 'UTC',
     defaultWarehouse: 'Stores - SD',
@@ -66,6 +67,7 @@ export function Settings() {
 
   const getWeekendLabel = () => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    // Note: Weekend definition should align with WEEKEND_DAYS constant [5, 6] (Friday, Saturday)
     const weekend: string[] = [];
     for (let i = 0; i < 7; i++) {
       if (i < settings.weekStart || i > settings.weekEnd) {
