@@ -36,7 +36,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
     def setUpClass(cls):
         """Set up browser once for all tests in this class."""
         cls.playwright = sync_playwright().start()
-        cls.browser = cls.playwright.chromium.launch(headless=True)
+        cls.browser = cls.playwright.chromium.launch(headless=False)
 
     @classmethod
     def tearDownClass(cls):
