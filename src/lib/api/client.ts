@@ -23,6 +23,7 @@ import type {
   ProcurementSuggestionResponse,
   HealthCheckResponse,
   SalesOrder,
+  SalesOrderListItem,
   SalesOrderListResponse,
   APIError,
   ValidationError,
@@ -169,7 +170,7 @@ export class APIClient {
    * Fetch list of Sales Orders (not yet implemented in backend)
    * Currently uses mock data, will fallback to real endpoint when available
    */
-  async fetchSalesOrders(limit: number = 20): Promise<SalesOrder[]> {
+  async fetchSalesOrders(limit: number = 20): Promise<SalesOrderListItem[]> {
     if (this.mockMode) {
       console.log("[OTP Client] Mock: fetchSalesOrders")
       return new Promise((resolve) => setTimeout(() => resolve(MOCK_SALES_ORDERS), 300))

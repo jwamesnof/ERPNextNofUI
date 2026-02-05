@@ -26,6 +26,14 @@ import type { APIError } from "@/lib/api/types"
  * - Documentation of component capabilities
  * - Development/iteration on component design
  */
+// Compute demo dates once (fixed dates for demo purposes)
+const now = new Date();
+const DEMO_DATES = {
+  fiveDaysLater: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  twoDaysLater: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  sevenDaysLater: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+};
+
 export default function ComponentShowcase() {
   const [selectedProcurementItems, setSelectedProcurementItems] = useState(false)
   const [demoError, setDemoError] = useState<APIError | null>(null)
@@ -166,9 +174,7 @@ export default function ComponentShowcase() {
                     {
                       source: "purchase_order",
                       qty: 30,
-                      date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
-                        .toISOString()
-                        .split("T")[0],
+                      date: DEMO_DATES.fiveDaysLater,
                       warehouse: "Main Warehouse",
                       details: "Expected delivery in 5 days",
                     },
@@ -196,17 +202,13 @@ export default function ComponentShowcase() {
                     notes: "Matches your desired date",
                   },
                   {
-                    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
-                      .toISOString()
-                      .split("T")[0],
+                    date: DEMO_DATES.twoDaysLater,
                     confidence: "MEDIUM",
                     days_advantage: 2,
                     notes: "Two days earlier with medium confidence",
                   },
                   {
-                    date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                      .toISOString()
-                      .split("T")[0],
+                    date: DEMO_DATES.sevenDaysLater,
                     confidence: "LOW",
                     days_advantage: -7,
                     notes: "One week later but ensures fulfillment",
@@ -263,7 +265,7 @@ export default function ComponentShowcase() {
               isOpen={selectedProcurementItems}
               onClose={() => setSelectedProcurementItems(false)}
               items={mockProcurementItems}
-              onSuccess={(result: any) => {
+              onSuccess={(result: unknown) => {
                 console.log("Procurement created:", result)
               }}
             />

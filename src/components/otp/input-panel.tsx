@@ -13,7 +13,9 @@ import { useSalesOrderDetails } from "@/hooks/useSalesOrderDetails"
 import type { SalesOrderDetailsResponse, SalesOrderDetailItem } from "@/lib/api/types"
 
 interface InputPanelProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit: (data: any) => Promise<void>
   isLoading: boolean
   onClearResults?: () => void
@@ -87,18 +89,20 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
   const [detailsAppliedFor, setDetailsAppliedFor] = useState<string | null>(null)
   
   // TWO separate draft states - one for each mode
-  const [manualDraft, setManualDraft] = useState<DraftState>({
+  const defaultManualDraft: DraftState = {
     salesOrderId: "",
     customer: "",
     items: [{ item_code: "", qty: 1, warehouse: DEFAULT_WAREHOUSE }],
     desiredDeliveryDate: "",
-    orderCreatedAt: form.getValues("orderCreatedAt") || "",
+    orderCreatedAt: "",
     deliveryMode: "LATEST_ACCEPTABLE",
     noWeekends: true,
     cutoffTime: "14:00",
     cutoffTimezone: "UTC",
     defaultWarehouse: DEFAULT_WAREHOUSE,
-  })
+  }
+  
+  const [manualDraft, setManualDraft] = useState<DraftState>(defaultManualDraft)
   
   const [fromSoDraft, setFromSoDraft] = useState<DraftState>({
     salesOrderId: "",
@@ -127,6 +131,42 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
     control: form.control,
     name: "items",
   })
+
+  // Load draft state into form
+  const loadDraft = (draft: DraftState) => {
+    form.setValue("salesOrderId", draft.salesOrderId, { shouldValidate: true })
+    form.setValue("customer", draft.customer, { shouldValidate: true })
+    form.setValue("desiredDeliveryDate", draft.desiredDeliveryDate, { shouldValidate: true })
+    form.setValue("orderCreatedAt", draft.orderCreatedAt, { shouldValidate: true })
+    form.setValue("deliveryMode", draft.deliveryMode, { shouldValidate: true })
+    form.setValue("noWeekends", draft.noWeekends, { shouldValidate: true })
+    form.setValue("cutoffTime", draft.cutoffTime, { shouldValidate: true })
+    form.setValue("cutoffTimezone", draft.cutoffTimezone, { shouldValidate: true })
+    form.setValue("defaultWarehouse", draft.defaultWarehouse, { shouldValidate: true })
+    replace(draft.items)
+  }
+
+  // Save current form state to appropriate draft before switching
+  const saveCurrentDraft = () => {
+    const currentValues = {
+      salesOrderId: form.getValues("salesOrderId") || "",
+      customer: form.getValues("customer") || "",
+      items: form.getValues("items") || [{ item_code: "", qty: 1, warehouse: DEFAULT_WAREHOUSE }],
+      desiredDeliveryDate: form.getValues("desiredDeliveryDate") || "",
+      orderCreatedAt: form.getValues("orderCreatedAt") || "",
+      deliveryMode: form.getValues("deliveryMode") || "LATEST_ACCEPTABLE",
+      noWeekends: form.getValues("noWeekends") ?? true,
+      cutoffTime: form.getValues("cutoffTime") || "14:00",
+      cutoffTimezone: form.getValues("cutoffTimezone") || "UTC",
+      defaultWarehouse: form.getValues("defaultWarehouse") || DEFAULT_WAREHOUSE,
+    }
+    
+    if (inputMode === "manual") {
+      setManualDraft(currentValues)
+    } else {
+      setFromSoDraft(currentValues)
+    }
+  }
 
   useEffect(() => {
     if (selectedSalesOrder) {
@@ -179,42 +219,6 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
     detailsLoading,
     detailsAppliedFor,
   ])
-
-  // Save current form state to appropriate draft before switching
-  const saveCurrentDraft = () => {
-    const currentValues = {
-      salesOrderId: form.getValues("salesOrderId") || "",
-      customer: form.getValues("customer") || "",
-      items: form.getValues("items") || [{ item_code: "", qty: 1, warehouse: DEFAULT_WAREHOUSE }],
-      desiredDeliveryDate: form.getValues("desiredDeliveryDate") || "",
-      orderCreatedAt: form.getValues("orderCreatedAt") || "",
-      deliveryMode: form.getValues("deliveryMode") || "LATEST_ACCEPTABLE",
-      noWeekends: form.getValues("noWeekends") ?? true,
-      cutoffTime: form.getValues("cutoffTime") || "14:00",
-      cutoffTimezone: form.getValues("cutoffTimezone") || "UTC",
-      defaultWarehouse: form.getValues("defaultWarehouse") || DEFAULT_WAREHOUSE,
-    }
-    
-    if (inputMode === "manual") {
-      setManualDraft(currentValues)
-    } else {
-      setFromSoDraft(currentValues)
-    }
-  }
-  
-  // Load draft state into form
-  const loadDraft = (draft: DraftState) => {
-    form.setValue("salesOrderId", draft.salesOrderId, { shouldValidate: true })
-    form.setValue("customer", draft.customer, { shouldValidate: true })
-    form.setValue("desiredDeliveryDate", draft.desiredDeliveryDate, { shouldValidate: true })
-    form.setValue("orderCreatedAt", draft.orderCreatedAt, { shouldValidate: true })
-    form.setValue("deliveryMode", draft.deliveryMode, { shouldValidate: true })
-    form.setValue("noWeekends", draft.noWeekends, { shouldValidate: true })
-    form.setValue("cutoffTime", draft.cutoffTime, { shouldValidate: true })
-    form.setValue("cutoffTimezone", draft.cutoffTimezone, { shouldValidate: true })
-    form.setValue("defaultWarehouse", draft.defaultWarehouse, { shouldValidate: true })
-    replace(draft.items)
-  }
 
   const handleModeChange = (mode: "manual" | "salesOrder") => {
     // Save current draft before switching

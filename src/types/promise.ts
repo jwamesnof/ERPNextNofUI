@@ -13,7 +13,7 @@ export type {
   PromiseApplyResponse,
   PromisePlan,
   Fulfillment,
-  PromiseOptions,
+  PromiseOption,
   PromiseRules,
   PromiseItem,
   HealthCheck,

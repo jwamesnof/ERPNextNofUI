@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { ChevronRight, Calendar, Filter, Download, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,8 +13,8 @@ interface AuditRecord {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   promiseDate: string;
   onTime: boolean | null;
-  request: Record<string, any>;
-  response: Record<string, any>;
+  request: Record<string, unknown>;
+  response: Record<string, unknown>;
 }
 
 export function AuditTrace() {
@@ -35,15 +35,16 @@ export function AuditTrace() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as AuditRecord[];
-        setRecords(parsed.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+        const sorted = [...parsed].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setRecords(sorted);
       } catch (e) {
         console.error('Failed to parse audit history:', e);
       }
     }
   }, []);
 
-  // Apply filters
-  useEffect(() => {
+  // Apply filters using useMemo to avoid setState in effect
+  const filteredRecordsMemo = useMemo(() => {
     let filtered = [...records];
 
     // Date range filter
@@ -77,8 +78,13 @@ export function AuditTrace() {
       filtered = filtered.filter((record) => record.onTime === false);
     }
 
-    setFilteredRecords(filtered);
+    return filtered;
   }, [records, dateFrom, dateTo, confidenceFilter, statusFilter]);
+
+  // Sync memo to state for compatibility with existing code
+  useEffect(() => {
+    setFilteredRecords(filteredRecordsMemo);
+  }, [filteredRecordsMemo]);
 
   const handleClearFilters = () => {
     setDateFrom('');
