@@ -1,9 +1,14 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useMemo } from "react"
 import { UseFormReturn, FieldArrayWithId } from "react-hook-form"
 import { Plus, Trash2, ChevronDown, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { DatePickerInput } from "@/components/ui/date-picker"
+import { ItemCodeInput } from "@/components/ui/item-code-input"
+import { StockMetricsDisplay } from "@/components/ui/stock-metrics-display"
+import { useItemSearch } from "@/hooks/useItemSearch"
+import { WEEKEND_DAYS, getWeekendLabel, getWorkweekLabel } from "@/lib/weekend"
 
 interface OrderFormProps {
   form: UseFormReturn<any>
@@ -43,20 +48,6 @@ const DELIVERY_MODES = [
   },
 ]
 
-/**
- * WEEKEND_DAYS - Single source of truth for weekend definition
- * 
- * Israel weekend: Friday (5) + Saturday (6)
- * Week days: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
- * 
- * This constant is used:
- * - For "Exclude weekends" business rule (noWeekends checkbox)
- * - For calendar date validation
- * - For backend promise calculation via no_weekends parameter
- * 
- * Do NOT hardcode weekend assumptions elsewhere. Import this constant instead.
- */
-export const WEEKEND_DAYS = [5, 6]
 
 export function OrderForm({
   form,
@@ -71,7 +62,13 @@ export function OrderForm({
   const errors = form.formState.errors as any
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showDeliverySettings, setShowDeliverySettings] = useState(false)
+  const [itemValidationErrors, setItemValidationErrors] = useState<Record<number, string>>({})
+  
+  const { items: availableItems, hasEndpoint, validateItem } = useItemSearch()
+  
   const defaultWarehouse = form.watch("defaultWarehouse") || "Stores - SD"
+  const watchedItems = form.watch("items") || []
+  const desiredDeliveryDate = form.watch("desiredDeliveryDate") as string | undefined
 
   const handleAddItem = () => {
     append({ item_code: "", qty: 1, warehouse: defaultWarehouse })
@@ -79,6 +76,26 @@ export function OrderForm({
 
   const handleClearAll = () => {
     replace([{ item_code: "", qty: 1, warehouse: defaultWarehouse }])
+  }
+
+  const handleItemCodeChange = (index: number, newItemCode: string) => {
+    // Just update the item code
+    form.setValue(`items.${index}.item_code`, newItemCode)
+  }
+
+  const handleItemValidationChange = (index: number, isValid: boolean, error?: string) => {
+    if (!isValid) {
+      setItemValidationErrors((prev) => ({
+        ...prev,
+        [index]: error || 'Invalid item',
+      }))
+    } else {
+      setItemValidationErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors[index]
+        return newErrors
+      })
+    }
   }
 
   return (
@@ -136,18 +153,19 @@ export function OrderForm({
                 className={`grid ${showAdvanced ? "grid-cols-6" : "grid-cols-5"} gap-2`}
               >
                 {/* Item Code */}
-                <div className="col-span-2 relative">
-                  <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g., SKU001"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    {...form.register(`items.${index}.item_code`)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                <div className="col-span-2">
+                  <ItemCodeInput
+                    value={form.watch(`items.${index}.item_code`) || ""}
+                    onChange={(value) => handleItemCodeChange(index, value)}
+                    disabled={isLoading}
+                    hasEndpoint={hasEndpoint}
+                    availableItems={availableItems}
+                    validateItem={validateItem}
+                    onValidationChange={(isValid, error) =>
+                      handleItemValidationChange(index, isValid, error)
+                    }
+                    error={itemValidationErrors[index]}
                   />
-                  </div>
                   {errors.items?.[index]?.item_code?.message && (
                     <p className="text-xs text-red-600 mt-1">
                       {String(errors.items[index].item_code.message)}
@@ -207,6 +225,17 @@ export function OrderForm({
                   </button>
                 </div>
               </motion.div>
+              <div className="mt-2 ml-1 text-[11px]">
+                <StockMetricsDisplay
+                  itemCode={watchedItems[index]?.item_code || ""}
+                  warehouse={watchedItems[index]?.warehouse || defaultWarehouse}
+                  initialStock={{
+                    stock_actual: watchedItems[index]?.stock_actual,
+                    stock_reserved: watchedItems[index]?.stock_reserved,
+                    stock_available: watchedItems[index]?.stock_available,
+                  }}
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -269,14 +298,17 @@ export function OrderForm({
                 <label htmlFor="desiredDeliveryDate" className="block text-sm font-medium text-slate-700 mb-2">
                   Desired Delivery Date (Optional)
                 </label>
-                <input
+                <input type="hidden" {...form.register("desiredDeliveryDate")} />
+                <DatePickerInput
                   id="desiredDeliveryDate"
-                  type="date"
-                  {...form.register("desiredDeliveryDate")}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm weekend-calendar"
+                  value={desiredDeliveryDate}
+                  onChange={(value) =>
+                    form.setValue("desiredDeliveryDate", value ?? "", { shouldDirty: true, shouldTouch: true })
+                  }
+                  placeholder="Select a date"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Weekend: Friday &amp; Saturday (Israel workweek)
+                  <p className="weekend-helper-text">
+                    Weekend: {getWeekendLabel()} (Israel workweek: {getWorkweekLabel()})
                 </p>
               </div>
 
@@ -332,9 +364,23 @@ export function OrderForm({
                   />
                   <span className="text-sm text-slate-700">Exclude weekends from promise dates</span>
                 </label>
-                <p className="text-xs text-slate-500 mt-1 ml-7">
-                  Weekends: Friday &amp; Saturday (based on Israel workweek)
+                  <p className="weekend-helper-text ml-7">
+                    Weekends: {getWeekendLabel()} (Israel workweek: {getWorkweekLabel()})
                 </p>
+              </div>
+
+              {/* Order Created At */}
+              <div>
+                <label htmlFor="orderCreatedAt" className="block text-sm font-medium text-slate-700 mb-2">
+                  Order Created At
+                </label>
+                <input
+                  id="orderCreatedAt"
+                  type="datetime-local"
+                  {...form.register("orderCreatedAt")}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">Used to apply cutoff rules</p>
               </div>
 
               {/* Cutoff Time */}
@@ -386,7 +432,7 @@ export function OrderForm({
               </div>
 
               <div className="text-xs text-slate-500">
-                Workweek: Sunday–Thursday • Weekend: Friday–Saturday
+                 Workweek: {getWorkweekLabel()} • Weekend: {getWeekendLabel()}
               </div>
             </motion.div>
           )}

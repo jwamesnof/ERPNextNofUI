@@ -33,6 +33,11 @@ function normalizeDesiredDate(details: SalesOrderDetailsResponse) {
   return details.delivery_date || details.transaction_date || ""
 }
 
+function normalizeOrderCreatedAt(details: SalesOrderDetailsResponse) {
+  if (!details.transaction_date) return ""
+  return `${details.transaction_date}T00:00`
+}
+
 function normalizeItems(
   detailsItems: SalesOrderDetailItem[] | undefined,
   defaultWarehouse: string
@@ -45,6 +50,9 @@ function normalizeItems(
     item_code: item.item_code || "",
     qty: item.qty ?? 1,
     warehouse: item.warehouse || defaultWarehouse,
+    stock_actual: item.stock_actual,
+    stock_reserved: item.stock_reserved,
+    stock_available: item.stock_available,
   }))
 }
 
@@ -52,11 +60,20 @@ function normalizeItems(
 type DraftState = {
   salesOrderId: string
   customer: string
-  items: Array<{ item_code: string; qty: number; warehouse: string }>
+  items: Array<{
+    item_code: string
+    qty: number
+    warehouse: string
+    stock_actual?: number
+    stock_reserved?: number
+    stock_available?: number
+  }>
   desiredDeliveryDate: string
+  orderCreatedAt: string
   deliveryMode: "LATEST_ACCEPTABLE" | "NO_EARLY_DELIVERY" | "STRICT_FAIL"
   noWeekends: boolean
   cutoffTime: string
+  cutoffTimezone: string
   defaultWarehouse: string
 }
 
@@ -75,9 +92,11 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
     customer: "",
     items: [{ item_code: "", qty: 1, warehouse: DEFAULT_WAREHOUSE }],
     desiredDeliveryDate: "",
+    orderCreatedAt: form.getValues("orderCreatedAt") || "",
     deliveryMode: "LATEST_ACCEPTABLE",
     noWeekends: true,
     cutoffTime: "14:00",
+    cutoffTimezone: "UTC",
     defaultWarehouse: DEFAULT_WAREHOUSE,
   })
   
@@ -86,9 +105,11 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
     customer: "",
     items: [{ item_code: "", qty: 1, warehouse: DEFAULT_WAREHOUSE }],
     desiredDeliveryDate: "",
+    orderCreatedAt: "",
     deliveryMode: "LATEST_ACCEPTABLE",
     noWeekends: true,
     cutoffTime: "14:00",
+    cutoffTimezone: "UTC",
     defaultWarehouse: DEFAULT_WAREHOUSE,
   })
 
@@ -136,9 +157,11 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
       salesOrderId: normalizeSalesOrderId(salesOrderDetails, selectedSalesOrder),
       customer: normalizeCustomer(salesOrderDetails),
       desiredDeliveryDate: normalizeDesiredDate(salesOrderDetails),
+      orderCreatedAt: normalizeOrderCreatedAt(salesOrderDetails),
       deliveryMode: defaults.delivery_mode || "LATEST_ACCEPTABLE",
       noWeekends: defaults.no_weekends ?? true,
       cutoffTime: defaults.cutoff_time || "14:00",
+      cutoffTimezone: form.getValues("cutoffTimezone") || "UTC",
       defaultWarehouse: defaultWarehouse,
       items: normalizeItems(salesOrderDetails.items, defaultWarehouse),
     }
@@ -164,9 +187,11 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
       customer: form.getValues("customer") || "",
       items: form.getValues("items") || [{ item_code: "", qty: 1, warehouse: DEFAULT_WAREHOUSE }],
       desiredDeliveryDate: form.getValues("desiredDeliveryDate") || "",
+      orderCreatedAt: form.getValues("orderCreatedAt") || "",
       deliveryMode: form.getValues("deliveryMode") || "LATEST_ACCEPTABLE",
       noWeekends: form.getValues("noWeekends") ?? true,
       cutoffTime: form.getValues("cutoffTime") || "14:00",
+      cutoffTimezone: form.getValues("cutoffTimezone") || "UTC",
       defaultWarehouse: form.getValues("defaultWarehouse") || DEFAULT_WAREHOUSE,
     }
     
@@ -182,9 +207,11 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
     form.setValue("salesOrderId", draft.salesOrderId, { shouldValidate: true })
     form.setValue("customer", draft.customer, { shouldValidate: true })
     form.setValue("desiredDeliveryDate", draft.desiredDeliveryDate, { shouldValidate: true })
+    form.setValue("orderCreatedAt", draft.orderCreatedAt, { shouldValidate: true })
     form.setValue("deliveryMode", draft.deliveryMode, { shouldValidate: true })
     form.setValue("noWeekends", draft.noWeekends, { shouldValidate: true })
     form.setValue("cutoffTime", draft.cutoffTime, { shouldValidate: true })
+    form.setValue("cutoffTimezone", draft.cutoffTimezone, { shouldValidate: true })
     form.setValue("defaultWarehouse", draft.defaultWarehouse, { shouldValidate: true })
     replace(draft.items)
   }
@@ -220,6 +247,8 @@ export function InputPanel({ form, onSubmit, isLoading, onClearResults }: InputP
         deliveryMode: "LATEST_ACCEPTABLE",
         noWeekends: true,
         cutoffTime: "14:00",
+        cutoffTimezone: "UTC",
+        orderCreatedAt: "",
         defaultWarehouse: DEFAULT_WAREHOUSE,
       }
       setFromSoDraft(resetDraft)

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, AlertCircle, CheckCircle, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { WEEKEND_DAYS } from './OrderForm';
+import { WEEKEND_DAYS, getWeekendLabel, getWorkweekLabel } from '@/lib/weekend';
 
 interface SettingsState {
   apiBaseUrl: string;
@@ -61,20 +61,11 @@ export function Settings() {
   };
 
   const getWorkdayLabel = () => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return `${days[settings.weekStart]} – ${days[settings.weekEnd]}`;
+    return getWorkweekLabel();
   };
 
-  const getWeekendLabel = () => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    // Note: Weekend definition should align with WEEKEND_DAYS constant [5, 6] (Friday, Saturday)
-    const weekend: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      if (i < settings.weekStart || i > settings.weekEnd) {
-        weekend.push(days[i]);
-      }
-    }
-    return weekend.join(', ');
+  const getWeekendLabelDisplay = () => {
+    return getWeekendLabel();
   };
 
   return (
@@ -203,7 +194,7 @@ export function Settings() {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-3">Weekend Days</label>
             <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-slate-900">{getWeekendLabel()}</p>
+                <p className="text-sm font-medium text-slate-900">{getWeekendLabelDisplay()}</p>
               <p className="text-xs text-slate-500 mt-2">Excluded from promise date calculations</p>
             </div>
 

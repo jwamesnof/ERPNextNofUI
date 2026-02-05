@@ -19,7 +19,21 @@ export function DriversConstraintsCard({ result }: DriversConstraintsCardProps) 
   const categorizeDrivers = (): Driver[] => {
     const reasons = result.reasons || []
     const blockers = result.blockers || []
-    const allItems = [...reasons, ...blockers]
+    
+    // Add delivery mode information if present
+    const modeInfo: string[] = []
+    if (result.desired_date_mode) {
+      const modeName = result.desired_date_mode.replace(/_/g, ' ')
+      if (result.desired_date_mode === 'STRICT_FAIL' && result.status === 'CANNOT_FULFILL') {
+        modeInfo.push(`Strict Fail mode: Cannot meet desired date of ${result.desired_date}`)
+      } else if (result.desired_date_mode === 'NO_EARLY_DELIVERY' && result.adjusted_due_to_no_early_delivery) {
+        modeInfo.push(`No Early Delivery mode: Promise adjusted to avoid early delivery`)
+      } else if (result.desired_date_mode === 'LATEST_ACCEPTABLE') {
+        modeInfo.push(`Latest Acceptable mode: Optimizing for earliest feasible delivery`)
+      }
+    }
+    
+    const allItems = [...modeInfo, ...reasons, ...blockers]
 
     return allItems.map((text) => {
       const lower = text.toLowerCase()
@@ -35,7 +49,11 @@ export function DriversConstraintsCard({ result }: DriversConstraintsCardProps) 
         lower.includes("cutoff") ||
         lower.includes("rule") ||
         lower.includes("adjusted") ||
-        lower.includes("buffer")
+        lower.includes("buffer") ||
+        lower.includes("mode") ||
+        lower.includes("strict fail") ||
+        lower.includes("no early delivery") ||
+        lower.includes("latest acceptable")
       ) {
         return { category: "business-rules", text }
       }

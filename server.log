@@ -1,0 +1,16 @@
+
+> erpnextnofui@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.10
+   - Local:        http://localhost:3000
+   - Network:      http://10.0.0.2:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 8.1s
+ ○ Compiling / ...
+ ✓ Compiled / in 9.6s (3679 modules)
+ GET / 200 in 14987ms
+ HEAD / 200 in 336ms
+ ✓ Compiled in 2.7s (1788 modules)

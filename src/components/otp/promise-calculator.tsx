@@ -38,10 +38,14 @@ const promiseFormSchema = z.object({
         qty: z.number().min(1, 'Quantity must be at least 1'),
         warehouse: z.string().default(''),
         lead_time_override_days: z.number().optional(),
+        stock_actual: z.number().optional(),
+        stock_reserved: z.number().optional(),
+        stock_available: z.number().optional(),
       })
     )
     .min(1, 'At least one item is required'),
   desiredDeliveryDate: z.string().default(''),
+  orderCreatedAt: z.string().default(''),
   deliveryMode: z.enum(['LATEST_ACCEPTABLE', 'NO_EARLY_DELIVERY', 'STRICT_FAIL']).default('LATEST_ACCEPTABLE'),
   noWeekends: z.boolean().default(true),
   cutoffTime: z.string().default('14:00'),
@@ -56,7 +60,30 @@ type LineItem = {
   qty: number;
   warehouse?: string;
   lead_time_override_days?: number;
+  stock_actual?: number;
+  stock_reserved?: number;
+  stock_available?: number;
 };
+
+function pad2(value: number) {
+  return value.toString().padStart(2, '0');
+}
+
+function getLocalDateTimeValue(date: Date) {
+  const yyyy = date.getFullYear();
+  const mm = pad2(date.getMonth() + 1);
+  const dd = pad2(date.getDate());
+  const hh = pad2(date.getHours());
+  const min = pad2(date.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+function isAfterCutoff(orderCreatedAt?: string, cutoffTime?: string) {
+  if (!orderCreatedAt || !cutoffTime) return false;
+  const timePart = orderCreatedAt.split('T')[1];
+  if (!timePart) return false;
+  return timePart >= cutoffTime;
+}
 
 export function PromiseCalculator() {
   const [result, setResult] = useState<PromiseResponse | null>(null);
@@ -77,6 +104,7 @@ export function PromiseCalculator() {
       customer: '',
       items: [{ item_code: '', qty: 1, warehouse: 'Stores - SD' }],
       desiredDeliveryDate: '',
+      orderCreatedAt: getLocalDateTimeValue(new Date()),
       deliveryMode: 'LATEST_ACCEPTABLE',
       noWeekends: true,
       cutoffTime: '14:00',
@@ -92,11 +120,21 @@ export function PromiseCalculator() {
     setResult(null);
 
     try {
-      // Build API request
-      const items = (data.items as LineItem[]) || [];
+      // Filter out items with empty item_code or invalid items (those that failed validation)
+      const validItems = (data.items as LineItem[]).filter(
+        (item) => item.item_code && item.item_code.trim().length > 0
+      ) || [];
+
+      if (validItems.length === 0) {
+        setError('At least one valid item is required');
+        setIsLoading(false);
+        return;
+      }
+
+      // Build API request with only valid items
       const request: PromiseRequest = {
         customer: data.customer,
-        items: items.map((item) => ({
+        items: validItems.map((item) => ({
           item_code: item.item_code,
           qty: item.qty,
           warehouse: item.warehouse,
@@ -109,6 +147,7 @@ export function PromiseCalculator() {
           lead_time_buffer_days: data.bufferDays,
           processing_lead_time_days: 1,
           desired_date_mode: data.deliveryMode,
+          order_created_at: data.orderCreatedAt || undefined,
         },
         sales_order_id: data.salesOrderId || undefined,
       };
@@ -118,12 +157,23 @@ export function PromiseCalculator() {
       // Call API
       const response = await otpClient.evaluatePromise(request);
 
+      const afterCutoffNote = isAfterCutoff(data.orderCreatedAt, data.cutoffTime)
+        ? 'After cutoff → processed next business day'
+        : null
+
+      const enrichedResponse: PromiseResponse = afterCutoffNote
+        ? {
+            ...response,
+            blockers: [...(response.blockers || []), afterCutoffNote],
+          }
+        : response
+
       // Store in audit history
       const auditRecord = {
         id: `audit_${Date.now()}`,
         timestamp: new Date().toISOString(),
         customer: data.customer,
-        itemCount: data.items.length,
+        itemCount: validItems.length,
         confidence: response.confidence,
         promiseDate: response.promise_date,
         onTime: response.on_time || null,
@@ -136,10 +186,24 @@ export function PromiseCalculator() {
       history.push(auditRecord);
       localStorage.setItem('otp_audit_history', JSON.stringify(history));
 
-      setResult(response);
+      setResult(enrichedResponse);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to evaluate promise';
-      setError(message);
+      let errorMessage = err instanceof Error ? err.message : 'Failed to evaluate promise';
+
+      // Handle OTP API errors with validation details
+      if (err instanceof Error && err.message.includes('unknown item')) {
+        const itemMatch = err.message.match(/unknown item[:\s](.+)/i);
+        if (itemMatch) {
+          errorMessage = `Item "${itemMatch[1]}" not found in inventory. Please check the item code.`;
+        }
+      }
+
+      // Handle validation errors from backend
+      if (err instanceof Error && err.message.includes('validation')) {
+        errorMessage = 'Validation error: Please check all items are valid.';
+      }
+
+      setError(errorMessage);
       console.error('Promise evaluation error:', err);
     } finally {
       setIsLoading(false);
