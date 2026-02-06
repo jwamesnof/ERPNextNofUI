@@ -11,6 +11,7 @@ on:
         default: 'https://uncorpulently-subovate-emil.ngrok-free.dev'
         type: string
 
+        
 permissions:
   contents: read
   pages: write
