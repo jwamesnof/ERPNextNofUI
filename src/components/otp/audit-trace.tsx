@@ -322,7 +322,7 @@ export function AuditTrace() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900">
-                      {format(parseISO(record.promiseDate), 'MMM dd, yyyy')}
+                      {record.promiseDate ? format(parseISO(record.promiseDate), 'MMM dd, yyyy') : 'N/A'}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(record.onTime)}`}>
