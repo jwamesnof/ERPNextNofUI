@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       app_url:
-        description: 'Application URL (use ngrok URL for local testing, or leave empty for local dev server). Current ngrok: https://uncorpulently-subovate-emil.ngrok-free.dev'
+        description: 'Application URL (use ngrok URL for CI testing, or leave empty for local dev server). Current ngrok: https://uncorpulently-subovate-emil.ngrok-free.dev'
         required: false
         default: 'https://uncorpulently-subovate-emil.ngrok-free.dev'
         type: string
@@ -70,63 +70,14 @@ jobs:
         fi
         python -m playwright install --with-deps $BROWSER_NAME
 
-    - name: Determine App URL
-      id: app_url
-      run: |
-        APP_URL="${{ github.event.inputs.app_url }}"
-        
-        # Default to ngrok URL if not provided (for PR triggers)
-        if [[ -z "$APP_URL" ]]; then
-          APP_URL="https://uncorpulently-subovate-emil.ngrok-free.dev"
-        fi
-        
-        # If localhost, use local mode (start dev server)
-        if [[ "$APP_URL" == *"localhost"* ]]; then
-          echo "url=http://localhost:3000" >> $GITHUB_OUTPUT
-          echo "use_local=true" >> $GITHUB_OUTPUT
-          echo "Using LOCAL dev server mode"
-        # If ngrok URL or other, use remote mode (don't start dev server)
-        else
-          echo "url=$APP_URL" >> $GITHUB_OUTPUT
-          echo "use_local=false" >> $GITHUB_OUTPUT
-          echo "Using NGROK tunnel mode: $APP_URL"
-        fi
-
-    - name: Start Next.js dev server (local mode only)
-      if: steps.app_url.outputs.use_local == 'true'
-      run: npm run dev > /tmp/dev-server.log 2>&1 &
-      env:
-        NODE_ENV: development
-
-    - name: Wait for dev server to start (local mode only)
-      if: steps.app_url.outputs.use_local == 'true'
-      run: |
-        for i in {1..30}; do
-          if curl -s http://localhost:3000 > /dev/null; then
-            echo "Dev server is ready"
-            exit 0
-          fi
-          echo "Waiting for dev server... ($i/30)"
-          sleep 2
-        done
-        echo "Dev server failed to start"
-        cat /tmp/dev-server.log
-        exit 1
-
-    - name: Confirm ngrok tunnel (ngrok mode only)
-      if: steps.app_url.outputs.use_local == 'false'
-      run: |
-        # Skip pre-check because ngrok may show a warning page until Playwright clicks "Visit Site".
-        echo "Ngrok tunnel URL: ${{ steps.app_url.outputs.url }}"
-        echo "Skipping pre-check; Playwright handles ngrok warning page"
-        
+    
     - name: Run Playwright tests with Allure
       env:
         HEADLESS: true
         BROWSER: ${{ matrix.browser }}
         SCREEN_WIDTH: ${{ matrix.resolution.width }}
         SCREEN_HEIGHT: ${{ matrix.resolution.height }}
-        BASE_URL: ${{ steps.app_url.outputs.url }}
+        BASE_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
         TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
       run: |
         python -m pytest tests/ -v --tb=short --alluredir=allure-results
@@ -139,8 +90,8 @@ jobs:
         echo "Resolution=${{ matrix.resolution.name }} (${{ matrix.resolution.width }}x${{ matrix.resolution.height }})" >> allure-results/environment.properties
         echo "Python.Version=$(python --version | cut -d' ' -f2)" >> allure-results/environment.properties
         echo "Test.Execution.Date=$(date +'%Y-%m-%d %H:%M:%S')" >> allure-results/environment.properties
-        echo "APP_URL=${{ steps.app_url.outputs.url }}" >> allure-results/environment.properties
-        echo "Mode=${{ steps.app_url.outputs.use_local == 'true' && 'Local Dev Server' || 'Ngrok Tunnel' }}" >> allure-results/environment.properties
+        echo "APP_URL=https://uncorpulently-subovate-emil.ngrok-free.dev" >> allure-results/environment.properties
+        
     
     - name: Upload Allure results
       if: always()
