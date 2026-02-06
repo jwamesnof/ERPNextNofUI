@@ -16,7 +16,8 @@ Follows AutomationSamana25 course pattern with unittest framework.
 import unittest
 import json
 import re
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect
+from tests.browser_factory import BrowserFactory
 from tests.pages.promise_calculator_page import PromiseCalculatorPage
 from tests.mocks.otp import (
     MOCK_HEALTH_RESPONSE,
@@ -35,39 +36,36 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up browser once for all tests in this class."""
-        cls.playwright = sync_playwright().start()
-        cls.browser = cls.playwright.chromium.launch(headless=False)
+        cls.factory = BrowserFactory()
+        cls.browser = cls.factory.start()
 
     @classmethod
     def tearDownClass(cls):
         """Clean up after all tests are done."""
         import threading
-        
+
         def close_browser():
             try:
-                cls.browser.close()
+                cls.factory.close()
             except (KeyboardInterrupt, Exception):
                 pass
-        
+
         # Close browser in a thread with timeout
         thread = threading.Thread(target=close_browser, daemon=True)
         thread.start()
         thread.join(timeout=5)
-        
-        try:
-            cls.playwright.stop()
-        except (KeyboardInterrupt, Exception):
-            pass
 
     def setUp(self):
         """Set up before each test method."""
-        self.page = self.browser.new_page()
+        self.context = self.factory.new_context()
+        self.page = self.context.new_page()
         self.promise_page = PromiseCalculatorPage(self.page)
         self._mock_api_endpoints()
 
     def tearDown(self):
         """Clean up after each test method."""
         self.page.close()
+        self.context.close()
 
     def _mock_api_endpoints(self):
         """Mock all API endpoints."""
