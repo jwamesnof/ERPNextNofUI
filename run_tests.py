@@ -4,7 +4,9 @@ import subprocess
 import sys
 import os
 
-os.environ["BASE_URL"] = "http://localhost:3000"
+# Use BASE_URL from environment (set by CI workflow), default to localhost for local runs
+base_url = os.environ.get("BASE_URL", "http://localhost:3000")
+os.environ["BASE_URL"] = base_url
 
 result = subprocess.run(
     [sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"],

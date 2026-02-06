@@ -32,16 +32,22 @@ class BasePage:
     
     def _handle_ngrok_warning(self) -> None:
         """Handle ngrok warning page by clicking 'Visit Site' button if present."""
-        try:
-            # Wait briefly for ngrok warning page to appear (if it exists)
-            visit_button = self.page.get_by_role("button", name="Visit Site")
-            if visit_button.is_visible(timeout=2000):
-                visit_button.click()
-                # Wait for actual page to load after clicking
-                self.page.wait_for_load_state("domcontentloaded", timeout=10000)
-        except Exception:
-            # No ngrok warning page, continue normally
-            pass
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Wait briefly for ngrok warning page to appear (if it exists)
+                visit_button = self.page.get_by_role("button", name="Visit Site")
+                if visit_button.is_visible(timeout=3000):
+                    visit_button.click()
+                    # Wait for actual page to load after clicking
+                    self.page.wait_for_load_state("domcontentloaded", timeout=10000)
+                    break
+            except Exception as e:
+                # No ngrok warning page, or button already handled
+                if attempt == max_retries - 1:
+                    pass  # Last attempt, just continue
+                else:
+                    pass  # Silently continue on other attempts
 
     def wait_for_network_idle(self, timeout: int = 5000) -> "BasePage":
         """Wait for network to be idle (for API calls)."""
