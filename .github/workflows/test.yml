@@ -62,7 +62,12 @@ jobs:
         pip install -r requirements.txt
 
     - name: Install Playwright browsers
-      run: playwright install --with-deps ${{ matrix.browser }}
+      run: |
+        BROWSER_NAME=${{ matrix.browser }}
+        if [ "$BROWSER_NAME" = "chrome" ]; then
+          BROWSER_NAME="chromium"
+        fi
+        python -m playwright install --with-deps $BROWSER_NAME
 
     - name: Determine App URL
       id: app_url
