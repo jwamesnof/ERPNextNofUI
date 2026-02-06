@@ -74,6 +74,11 @@ jobs:
       run: |
         APP_URL="${{ github.event.inputs.app_url }}"
         
+        # Default to ngrok URL if not provided (for PR triggers)
+        if [[ -z "$APP_URL" ]]; then
+          APP_URL="https://uncorpulently-subovate-emil.ngrok-free.dev"
+        fi
+        
         # If localhost, use local mode (start dev server)
         if [[ "$APP_URL" == *"localhost"* ]]; then
           echo "url=http://localhost:3000" >> $GITHUB_OUTPUT
