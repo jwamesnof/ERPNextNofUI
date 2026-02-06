@@ -1,17 +1,11 @@
+
 name: Playwright UI Tests with Allure
 
 on:
   pull_request:
-    branches: [main, develop]
-  workflow_dispatch:
-    inputs:
-      app_url:
-        description: 'Application URL (use ngrok URL for CI testing, or leave empty for local dev server). Current ngrok: https://uncorpulently-subovate-emil.ngrok-free.dev'
-        required: false
-        default: 'https://uncorpulently-subovate-emil.ngrok-free.dev'
-        type: string
+    branches:
+     - main
 
-        
 permissions:
   contents: read
   pages: write
@@ -39,59 +33,41 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 1
+        repository: jwamesnof/ERPNextNofUI  # Replace with your UI testing repo
       
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-
-    - name: Install Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-
-    - name: Install npm dependencies
-      run: npm install
-
-    - name: Build Next.js application
-      run: npm run build
         
-    - name: Install Python dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
+        
     - name: Install Playwright browsers
       run: |
-        BROWSER_NAME=${{ matrix.browser }}
-        if [ "$BROWSER_NAME" = "chrome" ]; then
-          BROWSER_NAME="chromium"
-        fi
-        python -m playwright install --with-deps $BROWSER_NAME
-
-    
+        playwright install --with-deps ${{ matrix.browser }}
+        
     - name: Run Playwright tests with Allure
       env:
         HEADLESS: true
         BROWSER: ${{ matrix.browser }}
         SCREEN_WIDTH: ${{ matrix.resolution.width }}
         SCREEN_HEIGHT: ${{ matrix.resolution.height }}
-        BASE_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
+        APP_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
         TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
       run: |
-        python -m pytest tests/ -v --tb=short --alluredir=allure-results
+        pytest tests/ -v --tb=short --alluredir=allure-results
     
     - name: Create environment properties
       if: always()
       run: |
-        mkdir -p allure-results
         echo "Browser=${{ matrix.browser }}" >> allure-results/environment.properties
         echo "Resolution=${{ matrix.resolution.name }} (${{ matrix.resolution.width }}x${{ matrix.resolution.height }})" >> allure-results/environment.properties
         echo "Python.Version=$(python --version | cut -d' ' -f2)" >> allure-results/environment.properties
         echo "Test.Execution.Date=$(date +'%Y-%m-%d %H:%M:%S')" >> allure-results/environment.properties
-        echo "APP_URL=https://uncorpulently-subovate-emil.ngrok-free.dev" >> allure-results/environment.properties
-        
+        echo "APP_URL=${{ env.APP_URL }}" >> allure-results/environment.properties
     
     - name: Upload Allure results
       if: always()
