@@ -57,7 +57,7 @@ jobs:
         BROWSER: ${{ matrix.browser }}
         SCREEN_WIDTH: ${{ matrix.resolution.width }}
         SCREEN_HEIGHT: ${{ matrix.resolution.height }}
-        APP_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
+        BASE_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
         TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
       run: |
         pytest tests/ -v --tb=short --alluredir=allure-results
@@ -69,7 +69,7 @@ jobs:
         echo "Resolution=${{ matrix.resolution.name }} (${{ matrix.resolution.width }}x${{ matrix.resolution.height }})" >> allure-results/environment.properties
         echo "Python.Version=$(python --version | cut -d' ' -f2)" >> allure-results/environment.properties
         echo "Test.Execution.Date=$(date +'%Y-%m-%d %H:%M:%S')" >> allure-results/environment.properties
-        echo "APP_URL=https://uncorpulently-subovate-emil.ngrok-free.dev" >> allure-results/environment.properties
+        echo "BASE_URL=https://uncorpulently-subovate-emil.ngrok-free.dev" >> allure-results/environment.properties
     
     - name: Upload Allure results
       if: always()
