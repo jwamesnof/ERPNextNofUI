@@ -95,6 +95,8 @@ npm --version
 # Install dependencies (if not already done)
 npm install
 
+# cd c:/Users/NofJawamis/Desktop/ERPNextNofUI/erpnextnofui && npm run dev
+
 # Install Playwright browsers (required once)
 npx playwright install
 ```
@@ -300,7 +302,7 @@ In `playwright.config.ts`:
 **Solution**: Ensure dev server is running
 ```bash
 # In one terminal
-npm run dev
+npm run dev     # cd c:/Users/NofJawamis/Desktop/ERPNextNofUI/erpnextnofui && npm run dev
 
 # In another terminal
 npm run test:ui
