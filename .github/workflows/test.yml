@@ -102,19 +102,12 @@ jobs:
         cat /tmp/dev-server.log
         exit 1
 
-    - name: Wait for ngrok tunnel (ngrok mode only)
+    - name: Confirm ngrok tunnel (ngrok mode only)
       if: steps.app_url.outputs.use_local == 'false'
       run: |
-        for i in {1..15}; do
-          if curl -s -k "${{ steps.app_url.outputs.url }}" > /dev/null 2>&1; then
-            echo "Ngrok tunnel is ready"
-            exit 0
-          fi
-          echo "Waiting for ngrok tunnel... ($i/15)"
-          sleep 2
-        done
-        echo "Ngrok tunnel not accessible"
-        exit 1
+        # Skip pre-check because ngrok may show a warning page until Playwright clicks "Visit Site".
+        echo "Ngrok tunnel URL: ${{ steps.app_url.outputs.url }}"
+        echo "Skipping pre-check; Playwright handles ngrok warning page"
         
     - name: Run Playwright tests with Allure
       env:
