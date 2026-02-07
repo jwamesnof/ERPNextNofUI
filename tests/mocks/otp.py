@@ -214,94 +214,146 @@ MOCK_STOCK_DATA = {
 }
 
 MOCK_PROMISE_RESPONSE_SUCCESS = {
-    "request_id": "req-12345",
-    "status": "FEASIBLE",
+    "status": "OK",
     "promise_date": "2026-02-18",
-    "confidence_pct": 95,
-    "confidence_level": "HIGH",
-    "order_created_at": "2026-02-01T10:30:00",
-    "desired_delivery_date": "2026-02-15",
-    "calculated_promise_date": "2026-02-18",
-    "factors": {
-        "is_weekend_excluded": True,
-        "is_holiday_checked": False,
-        "buffer_applied_days": 1,
-        "cutoff_time_applied": True,
-    },
+    "promise_date_raw": "2026-02-17",
+    "desired_date": "2026-02-15",
+    "desired_date_mode": "LATEST_ACCEPTABLE",
+    "on_time": False,
+    "adjusted_due_to_no_early_delivery": False,
+    "can_fulfill": True,
+    "confidence": "HIGH",
     "plan": [
         {
             "item_code": "WIDGET-ALPHA",
-            "qty": 5,
-            "warehouse": "Stores - SD",
-            "available": 15,
-            "lead_time_days": 1,
-            "feasible": True,
+            "qty_required": 5,
+            "fulfillment": [
+                {
+                    "source": "stock",
+                    "qty": 5,
+                    "available_date": "2026-02-05",
+                    "ship_ready_date": "2026-02-05",
+                    "warehouse": "Stores - SD",
+                }
+            ],
+            "shortage": 0,
         },
         {
             "item_code": "WIDGET-BETA",
-            "qty": 10,
-            "warehouse": "Stores - SD",
-            "available": 30,
-            "lead_time_days": 2,
-            "feasible": True,
+            "qty_required": 10,
+            "fulfillment": [
+                {
+                    "source": "stock",
+                    "qty": 10,
+                    "available_date": "2026-02-06",
+                    "ship_ready_date": "2026-02-06",
+                    "warehouse": "Stores - SD",
+                }
+            ],
+            "shortage": 0,
         },
         {
             "item_code": "COMPONENT-X",
-            "qty": 3,
-            "warehouse": "Stores - SD",
-            "available": 10,
-            "lead_time_days": 1,
-            "feasible": True,
+            "qty_required": 3,
+            "fulfillment": [
+                {
+                    "source": "stock",
+                    "qty": 3,
+                    "available_date": "2026-02-05",
+                    "ship_ready_date": "2026-02-05",
+                    "warehouse": "Stores - SD",
+                }
+            ],
+            "shortage": 0,
         },
     ],
-    "message": "Promise date: 2026-02-18 (HIGH confidence)",
+    "reasons": [
+        "All items available in warehouse",
+        "Can fulfill by 2026-02-18",
+        "Weekend adjustment applied",
+    ],
+    "blockers": [],
+    "options": [],
 }
 
 MOCK_PROMISE_RESPONSE_AT_RISK = {
-    "request_id": "req-12346",
-    "status": "AT_RISK",
+    "status": "CANNOT_PROMISE_RELIABLY",
     "promise_date": "2026-02-20",
-    "confidence_pct": 45,
-    "confidence_level": "LOW",
-    "order_created_at": "2026-02-01T10:30:00",
-    "desired_delivery_date": "2026-02-15",
-    "calculated_promise_date": "2026-02-20",
-    "factors": {
-        "is_weekend_excluded": True,
-        "is_holiday_checked": False,
-        "buffer_applied_days": 1,
-        "cutoff_time_applied": True,
-    },
+    "promise_date_raw": "2026-02-20",
+    "desired_date": "2026-02-15",
+    "desired_date_mode": "LATEST_ACCEPTABLE",
+    "on_time": False,
+    "adjusted_due_to_no_early_delivery": False,
+    "can_fulfill": False,
+    "confidence": "LOW",
     "plan": [
         {
             "item_code": "COMPONENT-Y",
-            "qty": 8,
-            "warehouse": "Stores - SD",
-            "available": 15,
-            "lead_time_days": 3,
-            "feasible": False,
+            "qty_required": 8,
+            "fulfillment": [
+                {
+                    "source": "stock",
+                    "qty": 5,
+                    "available_date": "2026-02-05",
+                    "ship_ready_date": "2026-02-05",
+                    "warehouse": "Stores - SD",
+                },
+                {
+                    "source": "purchase_order",
+                    "qty": 3,
+                    "available_date": "2026-02-20",
+                    "ship_ready_date": "2026-02-20",
+                    "warehouse": None,
+                    "po_id": "PO-2026-001",
+                    "expected_date": "2026-02-20",
+                }
+            ],
+            "shortage": 0,
         },
     ],
-    "message": "Promise date: 2026-02-20 (LOW confidence - delivery risk)",
+    "reasons": [
+        "Some items require purchase order",
+    ],
+    "blockers": [
+        "Delivery at risk due to purchase order lead time",
+    ],
+    "options": [],
 }
 
 MOCK_PROMISE_RESPONSE_NOT_FEASIBLE = {
-    "request_id": "req-12347",
-    "status": "NOT_FEASIBLE",
+    "status": "CANNOT_FULFILL",
     "promise_date": None,
-    "confidence_pct": 0,
-    "confidence_level": "CRITICAL",
-    "order_created_at": "2026-02-01T10:30:00",
-    "desired_delivery_date": "2026-02-10",
-    "calculated_promise_date": None,
-    "factors": {
-        "is_weekend_excluded": True,
-        "is_holiday_checked": False,
-        "buffer_applied_days": 1,
-        "cutoff_time_applied": True,
-    },
-    "plan": [],
-    "message": "Cannot fulfill: desired date is in past or insufficient stock",
+    "promise_date_raw": None,
+    "desired_date": "2026-02-10",
+    "desired_date_mode": "LATEST_ACCEPTABLE",
+    "on_time": None,
+    "adjusted_due_to_no_early_delivery": False,
+    "can_fulfill": False,
+    "confidence": "LOW",
+    "plan": [
+        {
+            "item_code": "COMPONENT-Y",
+            "qty_required": 20,
+            "fulfillment": [
+                {
+                    "source": "stock",
+                    "qty": 5,
+                    "available_date": "2026-02-05",
+                    "ship_ready_date": "2026-02-05",
+                    "warehouse": "Stores - SD",
+                }
+            ],
+            "shortage": 15,
+        },
+    ],
+    "reasons": [
+        "Insufficient stock for all items",
+    ],
+    "blockers": [
+        "Desired date is in the past",
+        "Insufficient inventory to fulfill order",
+    ],
+    "options": [],
 }
 
 VALID_ITEM_CODES = ["WIDGET-ALPHA", "WIDGET-BETA", "COMPONENT-X", "COMPONENT-Y", "GEAR-TYPE-A"]

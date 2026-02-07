@@ -16,6 +16,7 @@ Follows AutomationSamana25 course pattern with unittest framework.
 import unittest
 import json
 import re
+import time
 from playwright.sync_api import expect
 from tests.browser_factory import BrowserFactory
 from tests.pages.promise_calculator_page import PromiseCalculatorPage
@@ -42,89 +43,119 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """Clean up after all tests are done."""
-        import threading
-
-        def close_browser():
-            try:
-                cls.factory.close()
-            except (KeyboardInterrupt, Exception):
-                pass
-
-        # Close browser in a thread with timeout
-        thread = threading.Thread(target=close_browser, daemon=True)
-        thread.start()
-        thread.join(timeout=5)
+        try:
+            cls.factory.close()
+        except (KeyboardInterrupt, Exception):
+            pass
 
     def setUp(self):
         """Set up before each test method."""
         self.context = self.factory.new_context()
+        # Register routes on context BEFORE creating page
+        self._mock_api_endpoints_on_context()
         self.page = self.context.new_page()
         self.promise_page = PromiseCalculatorPage(self.page)
-        self._mock_api_endpoints()
 
     def tearDown(self):
         """Clean up after each test method."""
         self.page.close()
         self.context.close()
 
-    def _mock_api_endpoints(self):
-        """Mock all API endpoints."""
-        # Mock health check endpoints
-        def handle_health(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_HEALTH_RESPONSE),
-            )
+    def _mock_api_endpoints_on_context(self):
+        """Mock all API endpoints using a universal route handler."""
+        cors_headers = {
+            "access-control-allow-origin": "*",
+            "access-control-allow-methods": "GET,POST,OPTIONS",
+            "access-control-allow-headers": "*",
+        }
 
-        self.page.route("**/health", handle_health)
-        self.page.route("**/otp/health", handle_health)
-
-        # Mock sales orders list
-        def handle_sales_orders_list(route):
+        # Universal handler that checks URL and routes appropriately
+        def universal_handler(route):
             url = route.request.url
-            if "/otp/sales-orders/" in url:
+            method = route.request.method
+            
+            print(f"[REQUEST] {method} {url}")
+            
+            # Health checks
+            if "/health" in url:
+                print(f"[ROUTE] Mocking health check")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_HEALTH_RESPONSE),
+                )
                 return
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_SALES_ORDERS_LIST),
-            )
+            
+            # Sales order details
+            if "/sales-orders/SAL-ORD-2026-00001" in url:
+                print(f"[ROUTE] Mocking SO 00001")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001),
+                )
+                return
+            
+            if "/sales-orders/SAL-ORD-2026-00002" in url:
+                print(f"[ROUTE] Mocking SO 00002")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00002),
+                )
+                return
+            
+            # Sales orders list (must come after specific SO routes)
+            if "/sales-orders" in url and "SAL-ORD-2026" not in url:
+                print(f"[ROUTE] Mocking sales orders list")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_SALES_ORDERS_LIST),
+                )
+                return
+            
+            # Promise evaluation
+            if "/promise" in url:
+                print(f"[ROUTE] Mocking promise eval")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_PROMISE_RESPONSE_SUCCESS),
+                )
+                return
+            
+            # Let everything else through
+            route.continue_()
 
-        self.page.route("**/otp/sales-orders**", handle_sales_orders_list)
+        # Register universal handler for all requests
+        self.context.route("**/*", universal_handler)
 
-        # Mock individual sales order details
-        def handle_so_00001(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001),
-            )
+    def _fill_item_code(self, index: int, item_code: str) -> None:
+        combobox_inputs = self.page.get_by_test_id("item-code-search-input")
+        try:
+            target = combobox_inputs.nth(index)
+            target.wait_for(state="visible", timeout=3000)
+            target.click()
+            target.fill(item_code)
+            option = self.page.get_by_role("option").filter(has_text=item_code).first
+            if option.is_visible(timeout=2000):
+                option.click()
+            target.press("Tab")
+            return
+        except Exception:
+            pass
 
-        def handle_so_00002(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00002),
-            )
-
-        self.page.route("**/otp/sales-orders/SAL-ORD-2026-00001**", handle_so_00001)
-        self.page.route("**/otp/sales-orders/SAL-ORD-2026-00002**", handle_so_00002)
-
-        # Mock promise evaluation endpoint
-        def handle_promise_eval(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_PROMISE_RESPONSE_SUCCESS),
-            )
-
-        self.page.route("**/otp/promise", handle_promise_eval)
+        text_inputs = self.page.locator('input[placeholder="e.g., SKU001"]')
+        target = text_inputs.nth(index)
+        target.wait_for(state="visible", timeout=3000)
+        target.fill(item_code)
+        target.press("Tab")
 
     # ========================================================================
     # COMPONENT: Sales Order Combobox
@@ -136,21 +167,31 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.navigate_to_promise_calculator()
 
         # Switch to Sales Order mode
-        so_mode_button = self.page.get_by_test_id("input-mode-sales-order").first
-        so_mode_button.click()
-        self.page.wait_for_timeout(500)
+        self.promise_page.switch_to_sales_order_mode()
 
-        # Open dropdown
-        combobox_input = self.page.get_by_test_id(
-            "sales-order-combobox-input"
-        ).first
+        # Get combobox input
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=30000)
+
+        # Type to open dropdown
         combobox_input.click()
-        self.page.wait_for_timeout(500)
-
-        # Verify options appear
-        options = self.page.get_by_role("option")
-        option_count = options.count()
-        self.assertGreater(option_count, 0)
+        self.page.wait_for_timeout(300)
+        combobox_input.type("S")
+        
+        # Wait for listbox to render with options - use ID selector for reliability
+        listbox = self.page.locator('#sales-order-combobox-listbox')
+        listbox.wait_for(state="visible", timeout=5000)
+        
+        # Get options from the listbox (not page-global)
+        options = listbox.get_by_role("option")
+        
+        # Wait for options to be available
+        option_count = 0
+        start_time = time.time()
+        while option_count == 0 and time.time() - start_time < 5:
+            self.page.wait_for_timeout(100)
+            option_count = options.count()
+        
+        self.assertGreater(option_count, 0, "No options found in sales order dropdown")
 
         # Verify some expected sales orders are listed
         option_texts = []
@@ -160,28 +201,33 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Should contain at least one SAL-ORD
         found = any("SAL-ORD" in text for text in option_texts)
-        self.assertTrue(found)
+        self.assertTrue(found, f"No SAL-ORD found in options: {option_texts}")
 
     def test_combobox_02_sales_order_ids_sorted_numeric(self):
         """Component Test: Sales Order IDs are sorted in ascending numeric order."""
         self.promise_page.navigate_to_promise_calculator()
 
         # Switch to Sales Order mode
-        so_mode_button = self.page.get_by_test_id("input-mode-sales-order").first
-        so_mode_button.click()
-        self.page.wait_for_timeout(500)
+        self.promise_page.switch_to_sales_order_mode()
 
-        # Open dropdown
-        combobox_input = self.page.get_by_test_id(
-            "sales-order-combobox-input"
-        ).first
+        # Open dropdown by typing
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=30000)
         combobox_input.click()
-        self.page.wait_for_timeout(500)
-
-        # Get all options
-        options = self.page.get_by_role("option")
-        option_count = options.count()
-
+        self.page.wait_for_timeout(300)
+        combobox_input.type("")
+        
+        # Get all options - wait for listbox to render using ID selector
+        listbox = self.page.locator('#sales-order-combobox-listbox')
+        listbox.wait_for(state="visible", timeout=5000)
+        options = listbox.get_by_role("option")
+        
+        # Wait for options to populate
+        option_count = 0
+        start_time = time.time()
+        while option_count == 0 and time.time() - start_time < 5:
+            self.page.wait_for_timeout(100)
+            option_count = options.count()
+        
         # Extract numeric parts and verify sorting
         so_ids = []
         for i in range(min(option_count, 5)):
@@ -207,28 +253,28 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.navigate_to_promise_calculator()
 
         # Switch to Sales Order mode (VERIFIED: data-testid="input-mode-sales-order")
-        so_mode_button = self.page.get_by_test_id("input-mode-sales-order").first
-        so_mode_button.click()
-        self.page.wait_for_timeout(1000)
+        self.promise_page.switch_to_sales_order_mode()
 
-        # In sales-order mode, SalesOrderSelector renders a Combobox with testId="sales-order-combobox"
-        # Find the input inside that combobox (VERIFIED from source)
-        combobox_container = self.page.get_by_test_id("sales-order-combobox").first
-        combobox_input = combobox_container.locator('input[role="combobox"]').first
-        
-        if not combobox_input.is_visible():
-            self.skipTest("Combobox input not rendered in sales-order mode")
-        
+        # In sales-order mode, SalesOrderSelector renders a Combobox input
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=30000)
+
         # Type search term
         combobox_input.click()
         self.page.wait_for_timeout(300)
         combobox_input.fill("SAL-ORD")
-        self.page.wait_for_timeout(1500)
-
-        # Verify options appear
-        options = self.page.get_by_role("option")
-        option_count = options.count()
-
+        
+        # Verify options appear using ID selector
+        listbox = self.page.locator('#sales-order-combobox-listbox')
+        listbox.wait_for(state="visible", timeout=5000)
+        options = listbox.get_by_role("option")
+        
+        # Wait for options to populate
+        option_count = 0
+        start_time = time.time()
+        while option_count == 0 and time.time() - start_time < 5:
+            self.page.wait_for_timeout(100)
+            option_count = options.count()
+        
         # Should have at least one option
         if option_count > 0:
             first_option = options.first
@@ -240,14 +286,10 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.navigate_to_promise_calculator()
 
         # Switch to Sales Order mode
-        so_mode_button = self.page.get_by_test_id("input-mode-sales-order").first
-        so_mode_button.click()
-        self.page.wait_for_timeout(500)
+        self.promise_page.switch_to_sales_order_mode()
 
         # Select a sales order
-        combobox_input = self.page.get_by_test_id(
-            "sales-order-combobox-input"
-        ).first
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=30000)
         combobox_input.click()
         self.page.wait_for_timeout(300)
         combobox_input.fill("SAL-ORD-2026-00001")
@@ -263,9 +305,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
             self.assertIn("SAL-ORD-2026-00001", selected_value)
 
             # Click clear button
-            clear_button = self.page.locator(
-                '[data-testid="clear-selection-button"]'
-            ).first
+            clear_button = self.page.get_by_role("button", name="Clear").first
             if clear_button.is_visible():
                 clear_button.click()
                 self.page.wait_for_timeout(300)
@@ -273,6 +313,33 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
                 # Verify cleared
                 cleared_value = combobox_input.input_value()
                 self.assertEqual(cleared_value, "")
+
+    # ========================================================================
+    # COMPONENT: Sales Order Manual Input (Manual Mode)
+    # Test: Visibility and value persistence
+    # ========================================================================
+
+    def test_manual_sales_order_input_visible_and_persists(self):
+        """Component Test: Manual Sales Order input is visible and retains value."""
+        self.promise_page.navigate_to_promise_calculator()
+
+        # Manual mode input should be visible
+        self.promise_page.switch_to_manual_mode()
+        manual_input = self.page.get_by_test_id("sales-order-manual-input").first
+        manual_input.wait_for(state="visible", timeout=5000)
+
+        # Fill a value
+        manual_value = "SO-2024-001"
+        manual_input.fill(manual_value)
+        self.page.wait_for_timeout(200)
+        self.assertEqual(manual_input.input_value(), manual_value)
+
+        # Switch modes and ensure value persists when returning to manual mode
+        self.promise_page.switch_to_sales_order_mode()
+        self.promise_page.switch_to_manual_mode()
+        manual_input = self.page.get_by_test_id("sales-order-manual-input").first
+        manual_input.wait_for(state="visible", timeout=5000)
+        self.assertEqual(manual_input.input_value(), manual_value)
 
     # ========================================================================
     # COMPONENT: Item Code Input Field
@@ -287,8 +354,16 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.switch_to_manual_mode()
 
         # Fill customer
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         # Add a valid item
         item_code_input = self.page.locator(
@@ -299,7 +374,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.page.wait_for_timeout(300)
 
         qty_input = self.page.locator('input[type="number"]').first
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("5")
 
         add_button = self.page.get_by_role("button", name="Add Item")
@@ -321,8 +396,16 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.switch_to_manual_mode()
 
         # Fill customer
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         item_code_input = self.page.locator(
             'input[data-testid="item-code-search-input"], input[placeholder="e.g., SKU001"]'
@@ -333,7 +416,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Add first item
         item_code_input.fill(VALID_ITEM_CODES[0])  # WIDGET-ALPHA
         self.page.wait_for_timeout(300)
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("5")
 
         if add_button.is_visible():
@@ -343,7 +426,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Add second item
         item_code_input.fill(VALID_ITEM_CODES[1])  # WIDGET-BETA
         self.page.wait_for_timeout(300)
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("3")
 
         if add_button.is_visible():
@@ -353,7 +436,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Add third item
         item_code_input.fill(VALID_ITEM_CODES[2])  # COMPONENT-X
         self.page.wait_for_timeout(300)
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("2")
 
         if add_button.is_visible():
@@ -389,8 +472,16 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.switch_to_manual_mode()
 
         # Fill customer
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         # Try to add invalid item code
         item_code_input = self.page.locator(
@@ -425,8 +516,16 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.switch_to_manual_mode()
 
         # Fill customer
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         item_code_input = self.page.locator(
             'input[data-testid="item-code-search-input"], input[placeholder="e.g., SKU001"]'
@@ -438,7 +537,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
             item_code_input.fill(item_code)
             self.page.wait_for_timeout(300)
 
-            qty_input.clear()
+            qty_input.fill("")
             qty_input.fill("1")
 
             # Verify item input has the value
@@ -500,18 +599,24 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Setup manual order
         self.promise_page.switch_to_manual_mode()
 
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
-        item_code_input = self.page.locator(
-            'input[data-testid="item-code-search-input"], input[placeholder="e.g., SKU001"]'
-        ).first
-        item_code_input.fill("WIDGET-ALPHA")
+        self._fill_item_code(0, "WIDGET-ALPHA")
         self.page.wait_for_timeout(300)
 
         qty_input = self.page.locator('input[type="number"]').first
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("5")
+        qty_input.press("Tab")
 
         # Open delivery settings and verify no-weekends setting
         delivery_toggle = self.page.get_by_role("button", name="Delivery Settings")
@@ -528,8 +633,11 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
                 no_weekends_toggle.click()
 
         # Evaluate promise
+        self.promise_page.wait_for_api_connected(timeout=10000)
+
         evaluate_btn = self.page.get_by_role("button", name="Evaluate Promise")
         if evaluate_btn.is_visible():
+            expect(evaluate_btn).to_be_enabled(timeout=15000)
             evaluate_btn.click()
             self.page.wait_for_timeout(500)
 
@@ -574,22 +682,41 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Setup and evaluate
         self.promise_page.switch_to_manual_mode()
 
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         item_code_input = self.page.locator(
             'input[data-testid="item-code-search-input"], input[placeholder="e.g., SKU001"]'
         ).first
         item_code_input.fill("WIDGET-ALPHA")
+        item_code_input.press("Tab")
         self.page.wait_for_timeout(300)
 
         qty_input = self.page.locator('input[type="number"]').first
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("5")
+        qty_input.press("Tab")
+        self.page.wait_for_timeout(500)
 
         # Evaluate
+        self.promise_page.wait_for_api_connected(timeout=10000)
+
+        # Debug form state before evaluating
+        customer_val = self.page.evaluate("document.querySelector('#customer')?.value || ''")
+        items = self.page.locator('input[placeholder="e.g., SKU001"]').count()
+        print(f"[DEBUG test_results_01] Customer: '{customer_val}', Items: {items}")
+
         evaluate_btn = self.page.get_by_role("button", name="Evaluate Promise")
         if evaluate_btn.is_visible():
+            expect(evaluate_btn).to_be_enabled(timeout=15000)
             evaluate_btn.click()
             self.page.wait_for_timeout(500)
 
@@ -610,22 +737,30 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Setup and evaluate
         self.promise_page.switch_to_manual_mode()
 
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
-        item_code_input = self.page.locator(
-            'input[data-testid="item-code-search-input"], input[placeholder="e.g., SKU001"]'
-        ).first
-        item_code_input.fill("WIDGET-ALPHA")
+        self._fill_item_code(0, "WIDGET-ALPHA")
         self.page.wait_for_timeout(300)
 
         qty_input = self.page.locator('input[type="number"]').first
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("5")
+        qty_input.press("Tab")
 
         # Evaluate
         evaluate_btn = self.page.get_by_role("button", name="Evaluate Promise")
         if evaluate_btn.is_visible():
+            self.promise_page.wait_for_api_connected(timeout=10000)
+            expect(evaluate_btn).to_be_enabled(timeout=15000)
             evaluate_btn.click()
             self.page.wait_for_timeout(500)
 
@@ -654,8 +789,16 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Setup and evaluate
         self.promise_page.switch_to_manual_mode()
 
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         item_code_input = self.page.locator(
             'input[data-testid="item-code-search-input"], input[placeholder="e.g., SKU001"]'
@@ -664,7 +807,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.page.wait_for_timeout(300)
 
         qty_input = self.page.locator('input[type="number"]').first
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("5")
 
         # Evaluate

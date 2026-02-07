@@ -308,6 +308,17 @@ npm run dev     # cd c:/Users/NofJawamis/Desktop/ERPNextNofUI/erpnextnofui && np
 npm run test:ui
 ```
 
+# Terminal 1: Verify dev server is running
+curl http://localhost:3000
+
+# Terminal 2: Verify ngrok tunnel is active
+curl https://uncorpulently-subovate-emil.ngrok-free.dev
+
+# Terminal 3: Run the tests locally
+cd c:/Users/NofJawamis/Desktop/ERPNextNofUI/erpnextnofui
+export BASE_URL=https://uncorpulently-subovate-emil.ngrok-free.dev
+pytest tests/ -v --tb=short
+
 ### Issue: Tests timeout waiting for element
 **Solution**: Check selectors in `PromiseCalculatorPage.ts`
 ```bash

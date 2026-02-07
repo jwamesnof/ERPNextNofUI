@@ -14,6 +14,7 @@ Follows AutomationSamana25 course pattern with unittest framework.
 
 import unittest
 import json
+import time
 from playwright.sync_api import Page, expect
 from tests.browser_factory import BrowserFactory
 from tests.pages.promise_calculator_page import PromiseCalculatorPage
@@ -38,89 +39,119 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """Clean up after all tests are done."""
-        import threading
-
-        def close_browser():
-            try:
-                cls.factory.close()
-            except (KeyboardInterrupt, Exception):
-                pass
-
-        # Close browser in a thread with timeout
-        thread = threading.Thread(target=close_browser, daemon=True)
-        thread.start()
-        thread.join(timeout=5)
+        try:
+            cls.factory.close()
+        except (KeyboardInterrupt, Exception):
+            pass
 
     def setUp(self):
         """Set up before each test method."""
         self.context = self.factory.new_context()
+        # Register routes on context BEFORE creating page
+        self._mock_api_endpoints_on_context()
         self.page = self.context.new_page()
         self.promise_page = PromiseCalculatorPage(self.page)
-        self._mock_api_endpoints()
 
     def tearDown(self):
         """Clean up after each test method."""
         self.page.close()
         self.context.close()
 
-    def _mock_api_endpoints(self):
-        """Mock all API endpoints."""
-        # Mock health check endpoints
-        def handle_health(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_HEALTH_RESPONSE),
-            )
+    def _mock_api_endpoints_on_context(self):
+        """Mock all API endpoints using a universal route handler."""
+        cors_headers = {
+            "access-control-allow-origin": "*",
+            "access-control-allow-methods": "GET,POST,OPTIONS",
+            "access-control-allow-headers": "*",
+        }
 
-        self.page.route("**/health", handle_health)
-        self.page.route("**/otp/health", handle_health)
-
-        # Mock sales orders list
-        def handle_sales_orders_list(route):
+        # Universal handler that checks URL and routes appropriately
+        def universal_handler(route):
             url = route.request.url
-            if "/otp/sales-orders/" in url:
+            method = route.request.method
+            
+            print(f"[REQUEST] {method} {url}")
+            
+            # Health checks
+            if "/health" in url:
+                print(f"[ROUTE] Mocking health check")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_HEALTH_RESPONSE),
+                )
                 return
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_SALES_ORDERS_LIST),
-            )
+            
+            # Sales order details
+            if "/sales-orders/SAL-ORD-2026-00001" in url:
+                print(f"[ROUTE] Mocking SO 00001")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001),
+                )
+                return
+            
+            if "/sales-orders/SAL-ORD-2026-00002" in url:
+                print(f"[ROUTE] Mocking SO 00002")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00002),
+                )
+                return
+            
+            # Sales orders list (must come after specific SO routes)
+            if "/sales-orders" in url and "SAL-ORD-2026" not in url:
+                print(f"[ROUTE] Mocking sales orders list")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_SALES_ORDERS_LIST),
+                )
+                return
+            
+            # Promise evaluation
+            if "/promise" in url:
+                print(f"[ROUTE] Mocking promise eval")
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    headers=cors_headers,
+                    body=json.dumps(MOCK_PROMISE_RESPONSE_SUCCESS),
+                )
+                return
+            
+            # Let everything else through
+            route.continue_()
 
-        self.page.route("**/otp/sales-orders**", handle_sales_orders_list)
+        # Register universal handler for all requests
+        self.context.route("**/*", universal_handler)
 
-        # Mock individual sales order details
-        def handle_so_00001(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001),
-            )
+    def _fill_item_code(self, index: int, item_code: str) -> None:
+        combobox_inputs = self.page.get_by_test_id("item-code-search-input")
+        try:
+            target = combobox_inputs.nth(index)
+            target.wait_for(state="visible", timeout=3000)
+            target.click()
+            target.fill(item_code)
+            option = self.page.get_by_role("option").filter(has_text=item_code).first
+            if option.is_visible(timeout=2000):
+                option.click()
+            target.press("Tab")
+            return
+        except Exception:
+            pass
 
-        def handle_so_00002(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_SALES_ORDER_DETAILS_SAL_ORD_00002),
-            )
-
-        self.page.route("**/otp/sales-orders/SAL-ORD-2026-00001**", handle_so_00001)
-        self.page.route("**/otp/sales-orders/SAL-ORD-2026-00002**", handle_so_00002)
-
-        # Mock promise evaluation endpoint
-        def handle_promise_eval(route):
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"access-control-allow-origin": "*"},
-                body=json.dumps(MOCK_PROMISE_RESPONSE_SUCCESS),
-            )
-
-        self.page.route("**/otp/promise", handle_promise_eval)
+        text_inputs = self.page.locator('input[placeholder="e.g., SKU001"]')
+        target = text_inputs.nth(index)
+        target.wait_for(state="visible", timeout=3000)
+        target.fill(item_code)
+        target.press("Tab")
 
     # ========================================================================
     # SMOKE TESTS - Basic Page Functionality
@@ -181,18 +212,23 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         self.promise_page.verify_manual_mode_active()
 
         # Step 2: Fill customer name
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("ABC Manufacturing")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("ABC Manufacturing", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
 
         # Step 3: Add first item (WIDGET-ALPHA, qty 5)
-        item_code_inputs = self.page.locator('input[placeholder="e.g., SKU001"]')
         qty_inputs = self.page.locator('input[type="number"]')
 
-        item_code_inputs.nth(0).fill("WIDGET-ALPHA")
-        item_code_inputs.nth(0).press("Tab")
+        self._fill_item_code(0, "WIDGET-ALPHA")
         self.page.wait_for_timeout(500)  # Increased wait time
 
-        qty_inputs.nth(0).clear()
+        qty_inputs.nth(0).fill("")
         qty_inputs.nth(0).fill("5")
         qty_inputs.nth(0).press("Tab")  # Trigger blur/validation
         self.page.wait_for_timeout(500)
@@ -204,15 +240,13 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
 
         # Step 4: Add second item (WIDGET-BETA, qty 10)
         # Refresh locators to get updated list
-        item_code_inputs = self.page.locator('input[placeholder="e.g., SKU001"]')
         qty_inputs = self.page.locator('input[type="number"]')
 
         # Fill the second row
-        item_code_inputs.nth(1).fill("WIDGET-BETA")
-        item_code_inputs.nth(1).press("Tab")
+        self._fill_item_code(1, "WIDGET-BETA")
         self.page.wait_for_timeout(800)  # Increased wait for validation
         
-        qty_inputs.nth(1).clear()
+        qty_inputs.nth(1).fill("")
         qty_inputs.nth(1).fill("10")
         qty_inputs.nth(1).press("Tab")  # Trigger blur/validation
         self.page.wait_for_timeout(800)  # Wait for validation to complete
@@ -228,6 +262,8 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         api_connected = self.page.get_by_text("API connected").first
         if api_connected.is_visible():
             expect(api_connected).to_be_visible(timeout=10000)
+
+        self.promise_page.wait_for_api_connected(timeout=10000)
 
         evaluate_btn = self.page.get_by_role("button", name="Evaluate Promise")
         # Wait for button to be enabled (not disabled)
@@ -269,24 +305,39 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         """Journey A-2: Manual order with single item and evaluate."""
         self.promise_page.navigate_to_promise_calculator()
 
-        # Fill customer
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Test Customer")
+        # Fill customer  
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Test Customer", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         # Add single item
-        item_code_input = self.page.locator(
-            'input[placeholder="e.g., SKU001"]'
-        ).first
-        item_code_input.fill("WIDGET-ALPHA")
+        self._fill_item_code(0, "WIDGET-ALPHA")
         self.page.wait_for_timeout(300)
 
         qty_input = self.page.locator('input[type="number"]').first
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("5")
+        qty_input.press("Tab")
+        self.page.wait_for_timeout(500)
 
         # Evaluate promise
+        self.promise_page.wait_for_api_connected(timeout=10000)
+
+        # Debug form state
+        customer_val = self.page.evaluate("document.querySelector('#customer')?.value || ''")
+        items = self.page.locator('input[placeholder="e.g., SKU001"]').count()
+        print(f"[DEBUG test_journey_02] Customer: '{customer_val}', Items: {items}")
+
         evaluate_btn = self.page.get_by_role("button", name="Evaluate Promise")
         if evaluate_btn.is_visible():
+            expect(evaluate_btn).to_be_enabled(timeout=15000)
             evaluate_btn.click()
             self.page.wait_for_timeout(500)
 
@@ -299,8 +350,16 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         self.promise_page.navigate_to_promise_calculator()
 
         # Fill customer
-        customer_input = self.page.locator("#customer").first
-        customer_input.fill("Customer XYZ")
+        customer_input = self.page.locator("#customer")
+        customer_input.wait_for(state="visible", timeout=5000)
+        customer_input.click()
+        self.page.wait_for_timeout(100)
+        customer_input.fill("")  # Clear first
+        self.page.wait_for_timeout(100)
+        customer_input.type("Customer XYZ", delay=50)
+        self.page.wait_for_timeout(200)
+        customer_input.press("Tab")
+        self.page.wait_for_timeout(300)
 
         # Add item
         item_code_input = self.page.locator(
@@ -310,7 +369,7 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         self.page.wait_for_timeout(300)
 
         qty_input = self.page.locator('input[type="number"]').first
-        qty_input.clear()
+        qty_input.fill("")
         qty_input.fill("2")
 
         # Set a specific warehouse (no need to add a new empty row)
@@ -351,27 +410,33 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         self.promise_page.navigate_to_promise_calculator()
 
         # Step 1: Switch to Sales Order mode
-        so_mode_button = self.page.get_by_test_id(
-            "input-mode-sales-order"
-        ).first
-        so_mode_button.click()
-        self.page.wait_for_timeout(500)
+        self.promise_page.switch_to_sales_order_mode()
 
-        # Step 2: Select a sales order from combobox (VERIFIED: testId="sales-order-combobox")
-        combobox_container = self.page.get_by_test_id("sales-order-combobox").first
-        combobox_input = combobox_container.locator('input[role="combobox"]').first
+        # Step 2: Select a sales order from combobox
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=15000)
         combobox_input.click()
         self.page.wait_for_timeout(300)
 
         # Type to filter
         combobox_input.fill("SAL-ORD-2026-00001")
-        self.page.wait_for_timeout(500)
-
-        # Click the option
-        option = self.page.get_by_role("option").first
-        if option.is_visible():
-            option.click()
-            self.page.wait_for_timeout(500)
+        
+        # Click the option using ID selector
+        listbox = self.page.locator('#sales-order-combobox-listbox')
+        listbox.wait_for(state="visible", timeout=5000)
+        options = listbox.get_by_role("option")
+        
+        # Wait for options to populate
+        option_count = 0
+        start_time = time.time()
+        while option_count == 0 and time.time() - start_time < 5:
+            self.page.wait_for_timeout(100)
+            option_count = options.count()
+        
+        if option_count > 0:
+            option = options.first
+            if option.is_visible():
+                option.click()
+                self.page.wait_for_timeout(500)
 
             # Step 3: Click Evaluate Promise button
             evaluate_btn = self.page.get_by_role("button", name="Evaluate Promise")
@@ -380,121 +445,152 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
                 self.page.wait_for_timeout(500)
 
                 # Step 5: Verify results appear
-                results_section = self.page.locator(
-                    '[data-testid="results-section"]'
-                ).first
-                expect(results_section).to_be_visible(timeout=10000)
+                results_label = self.page.get_by_text("Promise Date").first
+                expect(results_label).to_be_visible(timeout=10000)
 
     def test_journey_05_switch_between_sales_orders(self):
         """Journey B-2: Load and switch between different sales orders."""
         self.promise_page.navigate_to_promise_calculator()
 
         # Switch to Sales Order mode
-        so_mode_button = self.page.get_by_test_id(
-            "input-mode-sales-order"
-        ).first
-        so_mode_button.click()
-        self.page.wait_for_timeout(500)
+        self.promise_page.switch_to_sales_order_mode()
 
-        # Select first sales order (VERIFIED combobox)
-        combobox_container = self.page.get_by_test_id("sales-order-combobox").first
-        combobox_input = combobox_container.locator('input[role="combobox"]').first
+        # Select first sales order
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=15000)
         combobox_input.click()
         self.page.wait_for_timeout(300)
         combobox_input.fill("SAL-ORD-2026-00001")
-        self.page.wait_for_timeout(500)
-
-        option = self.page.get_by_role("option").first
-        if option.is_visible():
-            option.click()
-            self.page.wait_for_timeout(500)
-
-            # Verify first SO is selected
-            selected = combobox_input.input_value()
-            self.assertIn("SAL-ORD-2026-00001", selected)
-
-            # Clear and select second SO
-            clear_button = self.page.get_by_role("button", name="Clear").first
-            if clear_button.is_visible():
-                clear_button.click()
-                self.page.wait_for_timeout(300)
-
-                # Select second SO
-                combobox_input.click()
-                self.page.wait_for_timeout(300)
-                combobox_input.fill("SAL-ORD-2026-00002")
+        
+        # Use ID selector for listbox
+        listbox = self.page.locator('#sales-order-combobox-listbox')
+        listbox.wait_for(state="visible", timeout=5000)
+        options = listbox.get_by_role("option")
+        
+        # Wait for options to populate
+        option_count = 0
+        start_time = time.time()
+        while option_count == 0 and time.time() - start_time < 5:
+            self.page.wait_for_timeout(100)
+            option_count = options.count()
+        
+        if option_count > 0:
+            option = options.first
+            if option.is_visible():
+                option.click()
                 self.page.wait_for_timeout(500)
 
-                option2 = self.page.get_by_role("option").first
-                if option2.is_visible():
-                    option2.click()
-                    self.page.wait_for_timeout(500)
+                # Verify first SO is selected
+                selected = combobox_input.input_value()
+                self.assertIn("SAL-ORD-2026-00001", selected)
 
-                    # Verify second SO is selected
-                    selected2 = combobox_input.input_value()
-                    self.assertIn("SAL-ORD-2026-00002", selected2)
+                # Clear and select second SO
+                clear_button = self.page.get_by_role("button", name="Clear").first
+                if clear_button.is_visible():
+                    clear_button.click()
+                    self.page.wait_for_timeout(300)
+
+                    # Select second SO
+                    combobox_input.click()
+                    self.page.wait_for_timeout(300)
+                    combobox_input.fill("SAL-ORD-2026-00002")
+                    
+                    # Use ID selector for listbox2
+                    listbox2 = self.page.locator('#sales-order-combobox-listbox')
+                    listbox2.wait_for(state="visible", timeout=5000)
+                    options2 = listbox2.get_by_role("option")
+                    
+                    # Wait for options to populate
+                    option_count2 = 0
+                    start_time2 = time.time()
+                    while option_count2 == 0 and time.time() - start_time2 < 5:
+                        self.page.wait_for_timeout(100)
+                        option_count2 = options2.count()
+                    
+                    if option_count2 > 0:
+                        option2 = options2.first
+                        if option2.is_visible():
+                            option2.click()
+                            self.page.wait_for_timeout(500)
+
+                            # Verify second SO is selected
+                            selected2 = combobox_input.input_value()
+                            self.assertIn("SAL-ORD-2026-00002", selected2)
 
     def test_journey_06_clear_sales_order_selection(self):
         """Journey B-3: Clear sales order selection."""
         self.promise_page.navigate_to_promise_calculator()
 
         # Switch to Sales Order mode
-        so_mode_button = self.page.get_by_test_id(
-            "input-mode-sales-order"
-        ).first
-        so_mode_button.click()
-        self.page.wait_for_timeout(500)
+        self.promise_page.switch_to_sales_order_mode()
 
-        # Select a sales order (VERIFIED combobox)
-        combobox_container = self.page.get_by_test_id("sales-order-combobox").first
-        combobox_input = combobox_container.locator('input[role="combobox"]').first
+        # Select a sales order
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=15000)
         combobox_input.click()
         self.page.wait_for_timeout(300)
         combobox_input.fill("SAL-ORD-2026-00001")
-        self.page.wait_for_timeout(500)
+        
+        # Use ID selector for listbox
+        listbox = self.page.locator('#sales-order-combobox-listbox')
+        listbox.wait_for(state="visible", timeout=5000)
+        options = listbox.get_by_role("option")
+        
+        # Wait for options to populate
+        option_count = 0
+        start_time = time.time()
+        while option_count == 0 and time.time() - start_time < 5:
+            self.page.wait_for_timeout(100)
+            option_count = options.count()
+        
+        if option_count > 0:
+            option = options.first
+            if option.is_visible():
+                option.click()
+                self.page.wait_for_timeout(500)
 
-        option = self.page.get_by_role("option").first
-        if option.is_visible():
-            option.click()
-            self.page.wait_for_timeout(500)
+                # Verify selected
+                selected = combobox_input.input_value()
+                self.assertTrue(selected)
 
-            # Verify selected
-            selected = combobox_input.input_value()
-            self.assertTrue(selected)
+                # Clear selection
+                clear_button = self.page.get_by_role("button", name="Clear").first
+                if clear_button.is_visible():
+                    clear_button.click()
+                    self.page.wait_for_timeout(300)
 
-            # Clear selection
-            clear_button = self.page.get_by_role("button", name="Clear").first
-            if clear_button.is_visible():
-                clear_button.click()
-                self.page.wait_for_timeout(300)
-
-                # Verify cleared
-                cleared = combobox_input.input_value()
-                self.assertEqual(cleared, "")
+                    # Verify cleared
+                    cleared = combobox_input.input_value()
+                    self.assertEqual(cleared, "")
 
     def test_journey_07_auto_fill_items_from_sales_order(self):
         """Journey B-4: Auto-fill items when loading sales order."""
         self.promise_page.navigate_to_promise_calculator()
 
         # Switch to Sales Order mode
-        so_mode_button = self.page.get_by_test_id(
-            "input-mode-sales-order"
-        ).first
-        so_mode_button.click()
-        self.page.wait_for_timeout(500)
+        self.promise_page.switch_to_sales_order_mode()
 
-        # Select a sales order (VERIFIED combobox)
-        combobox_container = self.page.get_by_test_id("sales-order-combobox").first
-        combobox_input = combobox_container.locator('input[role="combobox"]').first
+        # Select a sales order
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=15000)
         combobox_input.click()
         self.page.wait_for_timeout(300)
         combobox_input.fill("SAL-ORD-2026-00001")
-        self.page.wait_for_timeout(500)
-
-        option = self.page.get_by_role("option").first
-        if option.is_visible():
-            option.click()
-            self.page.wait_for_timeout(500)
+        
+        # Use ID selector for listbox
+        listbox = self.page.locator('#sales-order-combobox-listbox')
+        listbox.wait_for(state="visible", timeout=5000)
+        options = listbox.get_by_role("option")
+        
+        # Wait for options to populate
+        option_count = 0
+        start_time = time.time()
+        while option_count == 0 and time.time() - start_time < 5:
+            self.page.wait_for_timeout(100)
+            option_count = options.count()
+        
+        if option_count > 0:
+            option = options.first
+            if option.is_visible():
+                option.click()
+                self.page.wait_for_timeout(500)
 
             # Verify item code input is populated
             item_code_input = self.page.locator(

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 
 export interface ComboboxOption {
@@ -33,18 +33,29 @@ export function Combobox({
   onQueryChange,
   testId,
 }: ComboboxProps) {
-  const selected = options.find((option) => option.value === value) || null;
-  const [query, setQuery] = useState(selected?.label || '');
+  const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const prevValueRef = useRef(value);
 
+  // Only sync query when the value prop itself changes (external updates)
+  // This prevents clearing the search box during API refetches with new options
   useEffect(() => {
-    if (selected) {
-      setQuery(selected.label);
-    } else if (value === undefined || value === null || value === '') {
-      // Clear the query when value is explicitly cleared
-      setQuery('');
+    if (value !== prevValueRef.current) {
+      prevValueRef.current = value;
+      
+      if (value === undefined || value === null || value === '') {
+        // Value was cleared externally
+        setQuery('');
+      } else {
+        // Value was set externally - find matching option and sync label
+        const selectedOption = options.find((opt) => opt.value === value);
+        if (selectedOption) {
+          setQuery(selectedOption.label);
+        }
+      }
     }
-  }, [selected, value]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   useEffect(() => {
     onQueryChange?.(query);
