@@ -9,6 +9,8 @@ Encapsulates all interactions with the Promise Calculator page:
 Follows POM pattern: selectors as attributes, methods return self for chaining
 """
 
+import os
+import re
 from playwright.sync_api import Page, expect
 from tests.pages.base_page import BasePage
 
@@ -63,7 +65,8 @@ class PromiseCalculatorPage(BasePage):
             expect(heading).to_be_visible()
         except:
             # If heading not found, just verify page loaded by checking for basic element
-            expect(self.page).to_have_url("http://localhost:3000")
+            base_url = os.environ.get("BASE_URL", "http://localhost:3000").rstrip("/")
+            expect(self.page).to_have_url(re.compile(rf"^{re.escape(base_url)}/?$"))
         return self
 
     def verify_sidebar_visible(self) -> "PromiseCalculatorPage":
