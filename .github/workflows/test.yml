@@ -76,6 +76,8 @@ jobs:
         SCREEN_WIDTH: ${{ matrix.resolution.width }}
         SCREEN_HEIGHT: ${{ matrix.resolution.height }}
         BASE_URL: ${{ secrets.NGROK_URL || 'https://uncorpulently-subovate-emil.ngrok-free.dev' }}
+        NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NGROK_URL || 'https://uncorpulently-subovate-emil.ngrok-free.dev' }}
+        NEXT_PUBLIC_MOCK_MODE: true
         TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
       run: |
         mkdir -p allure-results
