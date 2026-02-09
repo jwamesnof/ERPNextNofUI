@@ -113,7 +113,7 @@ class PromiseCalculatorPage(BasePage):
                     print(f"[DEBUG] Attempt {attempts}: Found error banner, clicking Retry")
                     retry_button = self.page.get_by_role("button", name="Retry").first
                     try:
-                        retry_button.wait_for(state="visible", timeout=1000)
+                        retry_button.wait_for(state="visible", timeout=3000)
                         retry_button.click()
                         self.page.wait_for_timeout(2000)  # Wait longer after retry
                     except:
@@ -127,7 +127,7 @@ class PromiseCalculatorPage(BasePage):
                 loading_skeleton = self.page.get_by_test_id("loading-skeleton")
                 if loading_skeleton.count() > 0:
                     print(f"[DEBUG] Attempt {attempts}: Loading skeleton found, waiting for it to disappear")
-                    loading_skeleton.first.wait_for(state="hidden", timeout=5000)
+                    loading_skeleton.first.wait_for(state="hidden", timeout=3000)
             except Exception:
                 pass
             
@@ -141,7 +141,7 @@ class PromiseCalculatorPage(BasePage):
                 
                 # Now find the input inside
                 combobox_input = combobox_container.locator('input[type="text"]').first
-                combobox_input.wait_for(state="visible", timeout=2000)
+                combobox_input.wait_for(state="visible", timeout=3000)
                 
                 # Verify placeholder text to ensure it's the right combobox
                 placeholder = combobox_input.get_attribute("placeholder") or ""
@@ -174,15 +174,15 @@ class PromiseCalculatorPage(BasePage):
         """Switch to From Sales Order ID mode."""
         # Wait for button to be visible and clickable
         so_button = self.page.locator(self.SALES_ORDER_MODE_BUTTON).first
-        expect(so_button).to_be_visible(timeout=10000)
-        expect(so_button).to_be_enabled(timeout=10000)
+        expect(so_button).to_be_visible(timeout=3000)
+        expect(so_button).to_be_enabled(timeout=3000)
 
         # Retry the mode switch to handle hydration timing
         for attempt in range(3):
             so_button.click()
             self.page.wait_for_timeout(300)
             try:
-                self.wait_for_sales_order_combobox_input(timeout=5000)
+                self.wait_for_sales_order_combobox_input(timeout=3000)
                 return self
             except AssertionError:
                 if attempt == 2:

@@ -54,7 +54,7 @@ class BasePage:
             print(f"[WARNING] URL {base_url} may not be reachable, proceeding anyway")
         
         try:
-            self.page.goto(full_url, timeout=90000, wait_until='domcontentloaded')
+            self.page.goto(full_url, timeout=20000, wait_until='domcontentloaded')
             print(f"[SUCCESS] Navigated to {full_url}")
         except Exception as e:
             print(f"[ERROR] Navigation failed: {e}")
@@ -78,11 +78,11 @@ class BasePage:
             try:
                 # Wait briefly for ngrok warning page to appear (if it exists)
                 visit_button = self.page.get_by_role("button", name="Visit Site")
-                if visit_button.is_visible(timeout=2000):
+                if visit_button.is_visible(timeout=3000):
                     print("[INFO] Ngrok warning page detected, clicking 'Visit Site'")
                     visit_button.click()
                     # Wait for actual page to load after clicking
-                    self.page.wait_for_load_state("domcontentloaded", timeout=10000)
+                    self.page.wait_for_load_state("domcontentloaded", timeout=3000)
                     break
             except Exception as e:
                 # No ngrok warning page, or button already handled

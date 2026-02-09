@@ -22,8 +22,8 @@ MOCK_SALES_ORDERS_LIST = {
     "sales_orders": [
         {
             "name": "SAL-ORD-2026-00001",
-            "customer": "Acme Corporation",
-            "customer_name": "Acme Corporation",
+            "customer": "Palmer Productions Ltd.",
+            "customer_name": "Palmer Productions Ltd.",
             "so_date": "2026-02-01",
             "delivery_date": "2026-02-15",
             "item_count": 3,
@@ -32,8 +32,8 @@ MOCK_SALES_ORDERS_LIST = {
         },
         {
             "name": "SAL-ORD-2026-00002",
-            "customer": "Beta LLC",
-            "customer_name": "Beta LLC",
+            "customer": "West View Software Ltd.",
+            "customer_name": "West View Software Ltd.",
             "so_date": "2026-02-02",
             "delivery_date": "2026-02-20",
             "item_count": 2,
@@ -42,8 +42,8 @@ MOCK_SALES_ORDERS_LIST = {
         },
         {
             "name": "SAL-ORD-2026-00010",
-            "customer": "Gamma Industries",
-            "customer_name": "Gamma Industries",
+            "customer": "Grant Plastics Ltd.",
+            "customer_name": "Grant Plastics Ltd.",
             "so_date": "2026-02-03",
             "delivery_date": "2026-02-25",
             "item_count": 5,
@@ -59,17 +59,17 @@ MOCK_SALES_ORDERS_LIST = {
 MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001 = {
     "name": "SAL-ORD-2026-00001",
     "sales_order_id": "SAL-ORD-2026-00001",
-    "customer": "Acme Corporation",
-    "customer_name": "Acme Corporation",
+    "customer": "Palmer Productions Ltd.",
+    "customer_name": "Palmer Productions Ltd.",
     "transaction_date": "2026-02-01",
     "delivery_date": "2026-02-15",
     "status": "Draft",
     "items": [
         {
             "name": "SAL-ORD-2026-00001-0001",
-            "item_code": "WIDGET-ALPHA",
-            "item_name": "Widget Alpha",
-            "description": "Premium alpha widget",
+            "item_code": "SKU001",
+            "item_name": "T-shirt",
+            "description": "T-shirt",
             "qty": 5,
             "uom": "NOS",
             "warehouse": "Stores - SD",
@@ -79,9 +79,9 @@ MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001 = {
         },
         {
             "name": "SAL-ORD-2026-00001-0002",
-            "item_code": "WIDGET-BETA",
-            "item_name": "Widget Beta",
-            "description": "Standard beta widget",
+            "item_code": "SKU002",
+            "item_name": "Laptop",
+            "description": "Laptop",
             "qty": 10,
             "uom": "NOS",
             "warehouse": "Stores - SD",
@@ -91,9 +91,9 @@ MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001 = {
         },
         {
             "name": "SAL-ORD-2026-00001-0003",
-            "item_code": "COMPONENT-X",
-            "item_name": "Component X",
-            "description": "Critical component",
+            "item_code": "SKU003",
+            "item_name": "Book",
+            "description": "Book",
             "qty": 3,
             "uom": "NOS",
             "warehouse": "Stores - SD",
@@ -111,17 +111,17 @@ MOCK_SALES_ORDER_DETAILS_SAL_ORD_00001 = {
 MOCK_SALES_ORDER_DETAILS_SAL_ORD_00002 = {
     "name": "SAL-ORD-2026-00002",
     "sales_order_id": "SAL-ORD-2026-00002",
-    "customer": "Beta LLC",
-    "customer_name": "Beta LLC",
+    "customer": "West View Software Ltd.",
+    "customer_name": "West View Software Ltd.",
     "transaction_date": "2026-02-02",
     "delivery_date": "2026-02-20",
     "status": "Draft",
     "items": [
         {
             "name": "SAL-ORD-2026-00002-0001",
-            "item_code": "COMPONENT-Y",
-            "item_name": "Component Y",
-            "description": "Secondary component",
+            "item_code": "SKU004",
+            "item_name": "Smartphone",
+            "description": "Smartphone",
             "qty": 8,
             "uom": "NOS",
             "warehouse": "Stores - SD",
@@ -131,9 +131,9 @@ MOCK_SALES_ORDER_DETAILS_SAL_ORD_00002 = {
         },
         {
             "name": "SAL-ORD-2026-00002-0002",
-            "item_code": "GEAR-TYPE-A",
-            "item_name": "Gear Type A",
-            "description": "Standard gear",
+            "item_code": "SKU005",
+            "item_name": "Sneakers",
+            "description": "Sneakers",
             "qty": 6,
             "uom": "NOS",
             "warehouse": "Stores - SD",
@@ -151,8 +151,8 @@ MOCK_SALES_ORDER_DETAILS_SAL_ORD_00002 = {
 MOCK_STOCK_DATA = {
     "items": [
         {
-            "item_code": "WIDGET-ALPHA",
-            "item_name": "Widget Alpha",
+            "item_code": "SKU001",
+            "item_name": "T-shirt",
             "warehouses": [
                 {
                     "warehouse": "Stores - SD",
@@ -163,8 +163,8 @@ MOCK_STOCK_DATA = {
             ],
         },
         {
-            "item_code": "WIDGET-BETA",
-            "item_name": "Widget Beta",
+            "item_code": "SKU002",
+            "item_name": "Laptop",
             "warehouses": [
                 {
                     "warehouse": "Stores - SD",
@@ -175,8 +175,8 @@ MOCK_STOCK_DATA = {
             ],
         },
         {
-            "item_code": "COMPONENT-X",
-            "item_name": "Component X",
+            "item_code": "SKU003",
+            "item_name": "Book",
             "warehouses": [
                 {
                     "warehouse": "Stores - SD",
@@ -187,8 +187,8 @@ MOCK_STOCK_DATA = {
             ],
         },
         {
-            "item_code": "COMPONENT-Y",
-            "item_name": "Component Y",
+            "item_code": "SKU004",
+            "item_name": "Smartphone",
             "warehouses": [
                 {
                     "warehouse": "Stores - SD",
@@ -199,8 +199,8 @@ MOCK_STOCK_DATA = {
             ],
         },
         {
-            "item_code": "GEAR-TYPE-A",
-            "item_name": "Gear Type A",
+            "item_code": "SKU005",
+            "item_name": "Sneakers",
             "warehouses": [
                 {
                     "warehouse": "Stores - SD",
@@ -225,7 +225,7 @@ MOCK_PROMISE_RESPONSE_SUCCESS = {
     "confidence": "HIGH",
     "plan": [
         {
-            "item_code": "WIDGET-ALPHA",
+            "item_code": "SKU001",
             "qty_required": 5,
             "fulfillment": [
                 {
@@ -239,7 +239,7 @@ MOCK_PROMISE_RESPONSE_SUCCESS = {
             "shortage": 0,
         },
         {
-            "item_code": "WIDGET-BETA",
+            "item_code": "SKU002",
             "qty_required": 10,
             "fulfillment": [
                 {
@@ -253,7 +253,7 @@ MOCK_PROMISE_RESPONSE_SUCCESS = {
             "shortage": 0,
         },
         {
-            "item_code": "COMPONENT-X",
+            "item_code": "SKU003",
             "qty_required": 3,
             "fulfillment": [
                 {
@@ -288,7 +288,7 @@ MOCK_PROMISE_RESPONSE_AT_RISK = {
     "confidence": "LOW",
     "plan": [
         {
-            "item_code": "COMPONENT-Y",
+            "item_code": "SKU004",
             "qty_required": 8,
             "fulfillment": [
                 {
@@ -332,7 +332,7 @@ MOCK_PROMISE_RESPONSE_NOT_FEASIBLE = {
     "confidence": "LOW",
     "plan": [
         {
-            "item_code": "COMPONENT-Y",
+            "item_code": "SKU004",
             "qty_required": 20,
             "fulfillment": [
                 {
@@ -356,6 +356,20 @@ MOCK_PROMISE_RESPONSE_NOT_FEASIBLE = {
     "options": [],
 }
 
-VALID_ITEM_CODES = ["WIDGET-ALPHA", "WIDGET-BETA", "COMPONENT-X", "COMPONENT-Y", "GEAR-TYPE-A"]
+VALID_ITEM_CODES = ["SKU001", "SKU002", "SKU003", "SKU004", "SKU005"]
 INVALID_ITEM_CODE = "INVALID-ITEM-XYZ"
 DEFAULT_WAREHOUSE = "Stores - SD"
+
+# Mock items list for /otp/items endpoint
+MOCK_ITEMS_LIST = [
+    "SKU001",
+    "SKU002",
+    "SKU003",
+    "SKU004",
+    "SKU005",
+    "SKU006",
+    "SKU007",
+    "SKU008",
+    "SKU009",
+    "SKU010",
+]

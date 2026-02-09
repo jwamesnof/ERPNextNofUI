@@ -14,11 +14,11 @@
 import type { PromiseEvaluateResponse, HealthCheckResponse } from "./types"
 
 export const MOCK_SALES_ORDERS = [
-  { name: "SO-2026-00001", customer: "Big Corp", date: "2026-01-15", items: 3 },
-  { name: "SO-2026-00002", customer: "Tech Solutions Ltd", date: "2026-01-16", items: 5 },
-  { name: "SO-2026-00003", customer: "Global Trade Inc", date: "2026-01-17", items: 2 },
-  { name: "SO-2026-00004", customer: "Industrial Partners", date: "2026-01-18", items: 4 },
-  { name: "SO-2026-00005", customer: "Retail Network Co", date: "2026-01-19", items: 6 },
+  { name: "SAL-ORD-2026-00001", customer: "Big Corp", date: "2026-01-15", items: 3 },
+  { name: "SAL-ORD-2026-00002", customer: "Tech Solutions Ltd", date: "2026-01-16", items: 5 },
+  { name: "SAL-ORD-2026-00003", customer: "Global Trade Inc", date: "2026-01-17", items: 2 },
+  { name: "SAL-ORD-2026-00004", customer: "Industrial Partners", date: "2026-01-18", items: 4 },
+  { name: "SAL-ORD-2026-00005", customer: "Retail Network Co", date: "2026-01-19", items: 6 },
 ]
 
 export const MOCK_ITEMS = [
