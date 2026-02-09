@@ -50,23 +50,6 @@ jobs:
         fi
         python -m playwright install --with-deps $BROWSER_NAME
     
-    - name: Verify ngrok URL connectivity
-      run: |
-        BASE_URL="${{ secrets.NGROK_URL || 'https://rosalva-islandless-liberty.ngrok-free.dev' }}"
-        echo "Testing connectivity to: $BASE_URL"
-        
-        # Try to reach the URL with curl (allow ngrok warning page)
-        for i in {1..5}; do
-          if curl -s -o /dev/null -w "%{http_code}" "$BASE_URL" | grep -E "^(200|403)$"; then
-            echo "✓ $BASE_URL is reachable"
-            exit 0
-          fi
-          echo "Attempt $i/5 failed. Retrying in 5s..."
-          sleep 5
-        done
-        
-        echo "✗ Failed to reach $BASE_URL after 5 attempts"
-        exit 1
         
     - name: Run Playwright tests with Allure
       env:
@@ -76,7 +59,7 @@ jobs:
         SCREEN_HEIGHT: ${{ matrix.resolution.height }}
         BASE_URL: ${{ secrets.NGROK_URL || 'https://rosalva-islandless-liberty.ngrok-free.dev' }}
         NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NGROK_URL || 'https://rosalva-islandless-liberty.ngrok-free.dev' }}
-        NEXT_PUBLIC_MOCK_MODE: true
+        NEXT_PUBLIC_MOCK_MODE: false
         TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
       run: |
         mkdir -p allure-results
