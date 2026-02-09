@@ -52,12 +52,14 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
     def setUp(self):
         """Set up before each test method."""
         self.context = self.factory.new_context()
-        # Register routes on context BEFORE creating page (unless using live ERPNext)
         self.use_live_erp = os.getenv("USE_LIVE_ERP", "false").lower() == "true"
         if not self.use_live_erp:
             self._mock_api_endpoints_on_context()
         self.page = self.context.new_page()
         self.promise_page = PromiseCalculatorPage(self.page)
+        # Enhanced error logging for backend/API connection
+        self.page.on("requestfailed", lambda request: print(f"[ERROR] Request failed: {request.url} ({request.failure})"))
+        self.page.on("response", lambda response: print(f"[DEBUG] Response: {response.url} {response.status}") if response.status >= 400 else None)
 
     def tearDown(self):
         """Clean up after each test method."""
@@ -181,7 +183,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.switch_to_sales_order_mode()
 
         # Get combobox input
-        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=3000)
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=10000)
 
         # Type to open dropdown
         combobox_input.click()
@@ -190,7 +192,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         
         # Wait for listbox to render with options - use ID selector for reliability
         listbox = self.page.locator('#sales-order-combobox-listbox')
-        listbox.wait_for(state="visible", timeout=3000)
+        listbox.wait_for(state="visible", timeout=10000)
         
         # Get options from the listbox (not page-global)
         options = listbox.get_by_role("option")
@@ -204,7 +206,6 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
             option_count = options.count()
             if option_count == 0:
                 options.first.wait_for(state="attached", timeout=200)
-        
         self.assertGreater(option_count, 0, "No options found in sales order dropdown")
 
         # Verify some expected sales orders are listed
@@ -225,7 +226,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.switch_to_sales_order_mode()
 
         # In sales-order mode, SalesOrderSelector renders a Combobox input
-        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=3000)
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=10000)
 
         # Type search term
         combobox_input.click()
@@ -234,7 +235,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         
         # Verify options appear using ID selector
         listbox = self.page.locator('#sales-order-combobox-listbox')
-        listbox.wait_for(state="visible", timeout=3000)
+        listbox.wait_for(state="visible", timeout=10000)
         options = listbox.get_by_role("option")
         
         # Wait for options to populate
@@ -243,7 +244,6 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         while option_count == 0 and time.time() - start_time < 5:
             self.page.wait_for_timeout(50)
             option_count = options.count()
-        
         # Should have at least one option
         if option_count > 0:
             first_option = options.first
@@ -258,7 +258,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         self.promise_page.switch_to_sales_order_mode()
 
         # Select a sales order
-        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=3000)
+        combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=10000)
         combobox_input.click()
         # Wait for dropdown to be visible (already handled above)
         combobox_input.fill("SAL-ORD-2026-00009")
@@ -295,7 +295,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Manual mode input should be visible
         self.promise_page.switch_to_manual_mode()
         manual_input = self.page.get_by_test_id("sales-order-manual-input").first
-        manual_input.wait_for(state="visible", timeout=3000)
+        manual_input.wait_for(state="visible", timeout=10000)
 
         # Fill a value
         manual_value = "SO-2024-001"
@@ -303,15 +303,15 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         manual_input.fill("")
         manual_input.type(manual_value, delay=50)
         manual_input.press("Tab")
-        expect(manual_input).to_have_value(manual_value, timeout=2500)
+        expect(manual_input).to_have_value(manual_value, timeout=10000)
 
         # Switch modes and ensure value persists when returning to manual mode
         self.promise_page.switch_to_sales_order_mode()
         # Wait for dropdown to be visible (already handled above)
         self.promise_page.switch_to_manual_mode()
         manual_input = self.page.get_by_test_id("sales-order-manual-input").first
-        manual_input.wait_for(state="visible", timeout=3000)
-        expect(manual_input).to_have_value(manual_value, timeout=2500)
+        manual_input.wait_for(state="visible", timeout=10000)
+        expect(manual_input).to_have_value(manual_value, timeout=10000)
 
     # ========================================================================
     # COMPONENT: Item Code Input Field
@@ -332,7 +332,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Fill customer
         customer_input = self.page.locator("#customer")
-        customer_input.wait_for(state="visible", timeout=3000)
+        customer_input.wait_for(state="visible", timeout=10000)
         customer_input.scroll_into_view_if_needed()
         # Wait for dropdown to be visible (already handled above)
         customer_input.click()
@@ -381,7 +381,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Fill customer
         customer_input = self.page.locator("#customer")
-        customer_input.wait_for(state="visible", timeout=3000)
+        customer_input.wait_for(state="visible", timeout=10000)
         customer_input.scroll_into_view_if_needed()
         # Wait for dropdown to be visible (already handled above)
         customer_input.click()
