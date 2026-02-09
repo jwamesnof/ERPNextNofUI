@@ -185,7 +185,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Type to open dropdown
         combobox_input.click()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         combobox_input.type("S")
         
         # Wait for listbox to render with options - use ID selector for reliability
@@ -199,8 +199,11 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         option_count = 0
         start_time = time.time()
         while option_count == 0 and time.time() - start_time < 5:
-            self.page.wait_for_timeout(50)
+            # Wait for at least one option to appear
+            options = listbox.get_by_role("option")
             option_count = options.count()
+            if option_count == 0:
+                options.first.wait_for(state="attached", timeout=200)
         
         self.assertGreater(option_count, 0, "No options found in sales order dropdown")
 
@@ -226,7 +229,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Type search term
         combobox_input.click()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         combobox_input.fill("SAL-ORD-2026-00009")
         
         # Verify options appear using ID selector
@@ -257,14 +260,14 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         # Select a sales order
         combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=3000)
         combobox_input.click()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         combobox_input.fill("SAL-ORD-2026-00009")
-        self.page.wait_for_timeout(75)
+        # Wait for dropdown to be visible (already handled above)
 
         option = self.page.get_by_role("option").first
         if option.is_visible():
             option.click()
-            self.page.wait_for_timeout(75)
+            # Wait for dropdown to be visible (already handled above)
 
             # Verify selected
             selected_value = combobox_input.input_value()
@@ -274,7 +277,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
             clear_button = self.page.get_by_role("button", name="Clear").first
             if clear_button.is_visible():
                 clear_button.click()
-                self.page.wait_for_timeout(50)
+                # Wait for dropdown to be visible (already handled above)
 
                 # Verify cleared
                 cleared_value = combobox_input.input_value()
@@ -304,7 +307,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Switch modes and ensure value persists when returning to manual mode
         self.promise_page.switch_to_sales_order_mode()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         self.promise_page.switch_to_manual_mode()
         manual_input = self.page.get_by_test_id("sales-order-manual-input").first
         manual_input.wait_for(state="visible", timeout=3000)
@@ -321,25 +324,25 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Switch to manual mode
         self.promise_page.switch_to_manual_mode()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         
         # Scroll down smoothly to see the form
         self.page.evaluate("window.scrollBy({top: 1200, behavior: 'smooth'})")
-        self.page.wait_for_timeout(75)
+        # Wait for dropdown to be visible (already handled above)
 
         # Fill customer
         customer_input = self.page.locator("#customer")
         customer_input.wait_for(state="visible", timeout=3000)
         customer_input.scroll_into_view_if_needed()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         customer_input.click()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         customer_input.fill("")  # Clear first
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         customer_input.type("Palmer Productions Ltd.", delay=50)
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         customer_input.press("Tab")
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
 
         # Add a valid item
         item_code_input = self.page.locator(
@@ -347,7 +350,7 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
         ).first
         valid_item = VALID_ITEM_CODES[0]  # SKU001 (T-shirt)
         item_code_input.fill(valid_item)
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
 
         qty_input = self.page.locator('input[type="number"]').first
         qty_input.fill("")
@@ -370,17 +373,17 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
 
         # Switch to manual mode
         self.promise_page.switch_to_manual_mode()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         
         # Scroll down smoothly to see the form
         self.page.evaluate("window.scrollBy({top: 1200, behavior: 'smooth'})")
-        self.page.wait_for_timeout(75)
+        # Wait for dropdown to be visible (already handled above)
 
         # Fill customer
         customer_input = self.page.locator("#customer")
         customer_input.wait_for(state="visible", timeout=3000)
         customer_input.scroll_into_view_if_needed()
-        self.page.wait_for_timeout(50)
+        # Wait for dropdown to be visible (already handled above)
         customer_input.click()
         self.page.wait_for_timeout(50)
         customer_input.fill("")  # Clear first
@@ -700,14 +703,13 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
             customer_input.press("ArrowDown")
             customer_input.press("Enter")
 
-        self.page.wait_for_timeout(50)
-
+        # Wait for item code input to be visible
         item_code_input = self.page.locator(
             'input[data-testid="item-code-search-input"], input[placeholder="e.g., SKU001"]'
         ).first
+        item_code_input.wait_for(state="visible", timeout=3000)
         item_code_input.fill("SKU005")  # Valid item code (Camera)
         item_code_input.press("Tab")
-        self.page.wait_for_timeout(50)
 
         qty_input = self.page.locator('input[type="number"]').first
         qty_input.fill("")
@@ -719,19 +721,24 @@ class PromiseCalculatorComponentTest(unittest.TestCase):
             self.promise_page.wait_for_api_connected(timeout=3000)
             expect(evaluate_btn).to_be_enabled(timeout=3000)
             evaluate_btn.click()
-            self.page.wait_for_timeout(75)
 
-            # Verify results section visible
-            results_label = self.page.get_by_text("Promise Date").first
-            expect(results_label).to_be_visible(timeout=3000)
+            # Robustly wait for results section visible
+            try:
+                results_label = self.page.get_by_text("Promise Date").first
+                expect(results_label).to_be_visible(timeout=10000)
+            except Exception as e:
+                self.fail(f"Promise Date label not visible after evaluation: {e}")
 
             # Look for status
-            status_element = self.page.get_by_text(
-                re.compile(r"Feasible|At Risk|Not Feasible", re.IGNORECASE)
-            ).first
-            if status_element.is_visible():
+            try:
+                status_element = self.page.get_by_text(
+                    re.compile(r"Feasible|At Risk|Not Feasible", re.IGNORECASE)
+                ).first
+                expect(status_element).to_be_visible(timeout=5000)
                 status_text = status_element.inner_text()
                 self.assertTrue(status_text)
+            except Exception as e:
+                self.fail(f"Fulfillment status not visible after evaluation: {e}")
 
     # ========================================================================
     # COMPONENT: Calendar & Weekend Settings

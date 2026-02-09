@@ -238,28 +238,28 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         customer_input = self.page.locator("#customer")
         customer_input.wait_for(state="visible", timeout=3000)
         customer_input.click()
-        self.page.wait_for_timeout(50)
+            # Removed unnecessary slow-motion timeout
         customer_input.fill("")  # Clear first
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
         customer_input.type("ABC Manufacturing", delay=50)
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
         customer_input.press("Tab")
 
         # Step 3: Add first item (SKU001, qty 5)
         qty_inputs = self.page.locator('input[type="number"]')
 
         self._fill_item_code(0, "SKU001")
-        self.page.wait_for_timeout(75)  # Increased wait time
+        # Removed unnecessary wait_for_timeout
 
         qty_inputs.nth(0).fill("")
         qty_inputs.nth(0).fill("5")
         qty_inputs.nth(0).press("Tab")  # Trigger blur/validation
-        self.page.wait_for_timeout(75)
+        # Removed unnecessary wait_for_timeout
 
         add_button = self.page.get_by_role("button", name="Add Item")
         if add_button.is_visible():
             add_button.click()
-            self.page.wait_for_timeout(50)  # Wait for new row to appear
+            # Removed unnecessary wait_for_timeout
 
         # Step 4: Add second item (SKU002, qty 10)
         # Refresh locators to get updated list
@@ -267,16 +267,16 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
 
         # Fill the second row
         self._fill_item_code(1, "SKU002")
-        self.page.wait_for_timeout(50)  # Increased wait for validation
+        # Removed unnecessary wait_for_timeout
         
         qty_inputs.nth(1).fill("")
         qty_inputs.nth(1).fill("10")
         qty_inputs.nth(1).press("Tab")  # Trigger blur/validation
-        self.page.wait_for_timeout(50)  # Wait for validation to complete
+        # Removed unnecessary wait_for_timeout
 
         # Step 5: Set desired delivery date
         # Step 6: Ensure no validation errors, backend connected, then click Evaluate Promise
-        self.page.wait_for_timeout(1000)  # Additional wait for all validations
+        # Removed unnecessary wait_for_timeout
         
         error_messages = self.page.locator("p.text-red-600")
         if error_messages.count() > 0:
@@ -295,28 +295,28 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         if evaluate_btn.is_visible() and not evaluate_btn.is_disabled():
             # Click the evaluate button and wait for response
             evaluate_btn.click()
-            self.page.wait_for_timeout(3000)  # Increased wait for API response/results
 
-            # Step 7: Verify results appear - look for result panel or promise date
-            # Try multiple selectors to find results
+            # Step 7: Robustly wait for results appear - look for result panel or promise date
             results_visible = False
             try:
                 results_label = self.page.get_by_text("Promise Date").first
-                expect(results_label).to_be_visible(timeout=10000)  # Increased timeout
+                expect(results_label).to_be_visible(timeout=10000)
                 results_visible = True
-            except:
+            except Exception as e:
                 # Alternative: look for the results panel container
                 result_panel = self.page.locator(".bg-white.rounded-xl, [class*='rounded-xl']").filter(has_text="Promise Date")
                 if result_panel.is_visible(timeout=10000):
                     results_visible = True
-            
+                else:
+                    self.fail(f"Results panel did not appear after evaluation: {e}")
+
             self.assertTrue(results_visible, "Results panel did not appear after evaluation")
 
             # Step 8: Verify promise date is displayed
             promise_date_element = self.page.get_by_text("Promise Date").first
-            if promise_date_element.is_visible():
-                date_text = promise_date_element.inner_text()
-                self.assertTrue(date_text)
+            expect(promise_date_element).to_be_visible(timeout=3000)
+            date_text = promise_date_element.inner_text()
+            self.assertTrue(date_text, "Promise Date text is empty")
 
             # Step 9: Verify confidence level displays
             confidence_element = self.page.get_by_text("Confidence").first
@@ -332,11 +332,11 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         customer_input = self.page.locator("#customer")
         customer_input.wait_for(state="visible", timeout=3000)
         customer_input.click()
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
         customer_input.fill("")  # Clear first
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
         customer_input.type("Palmer Productions Ltd.", delay=50)
-        self.page.wait_for_timeout(150)
+        # Removed unnecessary wait_for_timeout
 
         option = self.page.get_by_role("option").filter(has_text="Palmer Productions Ltd.").first
         if option.is_visible():
@@ -345,17 +345,17 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
             customer_input.press("ArrowDown")
             customer_input.press("Enter")
 
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
 
         # Add single item
         self._fill_item_code(0, "SKU008")
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
 
         qty_input = self.page.locator('input[type="number"]').first
         qty_input.fill("")
         qty_input.fill("5")
         qty_input.press("Tab")
-        self.page.wait_for_timeout(75)
+        # Removed unnecessary wait_for_timeout
 
         # Evaluate promise
         self.promise_page.wait_for_api_connected(timeout=3000)
@@ -369,7 +369,7 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         if evaluate_btn.is_visible():
             expect(evaluate_btn).to_be_enabled(timeout=3000)
             evaluate_btn.click()
-            self.page.wait_for_timeout(75)
+            # Removed unnecessary wait_for_timeout
 
             # Verify results render
             results_label = self.page.get_by_text("Promise Date").first
@@ -383,20 +383,20 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         customer_input = self.page.locator("#customer")
         customer_input.wait_for(state="visible", timeout=3000)
         customer_input.click()
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
         customer_input.fill("")  # Clear first
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
         customer_input.type("Customer XYZ", delay=50)
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
         customer_input.press("Tab")
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
 
         # Add item
         item_code_input = self.page.locator(
             'input[placeholder="e.g., SKU001"]'
         ).first
         item_code_input.fill("SKU008")
-        self.page.wait_for_timeout(50)
+        # Removed unnecessary wait_for_timeout
 
         qty_input = self.page.locator('input[type="number"]').first
         qty_input.fill("")
@@ -445,7 +445,7 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         # Step 2: Select a sales order from combobox
         combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=3000)
         combobox_input.click()
-        self.page.wait_for_timeout(50)
+        # Wait for the listbox to be visible (already done above)
 
         # Type to filter
         combobox_input.fill("SAL-ORD-2026-00009")
@@ -459,8 +459,11 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         option_count = 0
         start_time = time.time()
         while option_count == 0 and time.time() - start_time < 5:
-            self.page.wait_for_timeout(50)
+            # Wait for at least one option to appear
+            options = listbox.get_by_role("option")
             option_count = options.count()
+            if option_count == 0:
+                options.first.wait_for(state="attached", timeout=200)
         
         if option_count > 0:
             option = options.first
@@ -620,18 +623,22 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         
         if option_count > 0:
             option = options.first
-            if option.is_visible():
-                option.click()
-                self.page.wait_for_timeout(200)
+            option.wait_for(state="visible", timeout=2000)
+            option.click()
 
-            # Verify item code input is populated
+            # Robustly wait for item code input to be populated
             item_code_input = self.page.locator(
                 'input[placeholder="e.g., SKU001"]'
             ).first
-            self.page.wait_for_timeout(200)
-            if item_code_input.is_visible():
+            item_code_input.wait_for(state="visible", timeout=3000)
+            value = ""
+            start_time = time.time()
+            while value == "" and time.time() - start_time < 5:
                 value = item_code_input.input_value()
-                self.assertTrue(value)
+                if value:
+                    break
+                self.page.wait_for_timeout(100)
+            self.assertTrue(value, "Item code input was not populated after selecting sales order")
 
 
 if __name__ == "__main__":
