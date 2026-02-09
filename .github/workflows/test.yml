@@ -52,7 +52,7 @@ jobs:
     
     - name: Verify ngrok URL connectivity
       run: |
-        BASE_URL="${{ secrets.NGROK_URL || 'https://uncorpulently-subovate-emil.ngrok-free.dev' }}"
+        BASE_URL="${{ secrets.NGROK_URL || 'https://rosalva-islandless-liberty.ngrok-free.dev' }}"
         echo "Testing connectivity to: $BASE_URL"
         
         # Try to reach the URL with curl (allow ngrok warning page)
@@ -74,8 +74,8 @@ jobs:
         BROWSER: ${{ matrix.browser }}
         SCREEN_WIDTH: ${{ matrix.resolution.width }}
         SCREEN_HEIGHT: ${{ matrix.resolution.height }}
-        BASE_URL: ${{ secrets.NGROK_URL || 'https://uncorpulently-subovate-emil.ngrok-free.dev' }}
-        NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NGROK_URL || 'https://uncorpulently-subovate-emil.ngrok-free.dev' }}
+        BASE_URL: ${{ secrets.NGROK_URL || 'https://rosalva-islandless-liberty.ngrok-free.dev' }}
+        NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NGROK_URL || 'https://rosalva-islandless-liberty.ngrok-free.dev' }}
         NEXT_PUBLIC_MOCK_MODE: true
         TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
       run: |
@@ -90,7 +90,7 @@ jobs:
         echo "Resolution=${{ matrix.resolution.name }} (${{ matrix.resolution.width }}x${{ matrix.resolution.height }})" >> allure-results/environment.properties
         echo "Python.Version=$(python --version | cut -d' ' -f2)" >> allure-results/environment.properties
         echo "Test.Execution.Date=$(date +'%Y-%m-%d %H:%M:%S')" >> allure-results/environment.properties
-        echo "BASE_URL=https://uncorpulently-subovate-emil.ngrok-free.dev" >> allure-results/environment.properties
+        echo "BASE_URL=https://rosalva-islandless-liberty.ngrok-free.dev" >> allure-results/environment.properties
     
     - name: Upload Allure results
       if: always()
