@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+allure-results/
+allure-report/
+
 
 # next.js
 /.next/
@@ -40,3 +43,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+__pycache__/
+*.pyc
+*.pyo
+playwright-report/
+
+server.log
+test_results.txt
+test_run.log
