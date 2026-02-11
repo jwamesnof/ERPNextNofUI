@@ -17,6 +17,18 @@ allure-report/
 
 test-results/
 
+tests/__pycache__/
+tests/mocks/__pycache__/
+tests/pages/__pycache__/
+
+tests/steps/__pycache__/
+tests/steps/__init__.cpython-37.pyc
+tests/steps/__init__.cpython-37.pyo
+tests/steps/login_steps.cpython-37.pyc
+tests/steps/login_steps.cpython-37.pyo
+tests/steps/promise_calculator_steps.cpython-37.pyc
+tests/steps/promise_calculator_steps.cpython-37.pyo
+
 # next.js
 /.next/
 /out/
@@ -56,3 +68,26 @@ test_results.txt
 test_run.log
 
 server.log
+tests/__pycache__/__init__.cpython-37.pyc
+tests/mocks/__pycache__/__init__.cpython-37.pyc
+
+tests/mocks/__pycache__/otp.cpython-37.pyc
+tests/pages/__pycache__/__init__.cpython-37.pyc
+tests/pages/__pycache__/base_page.cpython-37.pyc
+tests/pages/__pycache__/promise_calculator_page.cpython-37.pyc
+
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+
+
+
+
