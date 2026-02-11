@@ -234,10 +234,10 @@ else:
 | Test Layer | Framework | Scope | Example |
 |-----------|-----------|-------|---------|
 | **Unit Tests** | Jest | Functions, types | OTP algorithm logic, date math |
-| **Component Tests** | Playwright | UI components | PromiseCalculatorPage form entry |
-| **Journey Tests** | Playwright | End-to-end workflows | "Load SO → Evaluate → Apply → Audit" |
 | **Integration Tests** | Playwright + Mock API | Frontend + Backend | Full user flow with mocked ERPNext |
 | **API Tests** | pytest (if backend repo) | Backend endpoints | `/otp/promise` with test data |
+| **Component Tests** | Playwright | UI components | PromiseCalculatorPage form entry |
+| **Journey Tests** | Playwright | End-to-end workflows | "Load SO → Evaluate → Apply → Audit" |
 
 **Bullets:**
 - ✅ **Deterministic**: All external APIs mocked (no dependency on live ERPNext)

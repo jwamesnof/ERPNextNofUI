@@ -604,7 +604,7 @@ class PromiseCalculatorJourneyTest(unittest.TestCase):
         combobox_input = self.promise_page.wait_for_sales_order_combobox_input(timeout=3000)
         combobox_input.click()
         self.page.wait_for_timeout(50)
-        combobox_input.fill("SAL-ORD-2026-00009")
+        combobox_input.fill("SAL-ORD-2026-00001")
         
         # Use ID selector for listbox
         listbox = self.page.locator('#sales-order-combobox-listbox')

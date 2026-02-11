@@ -402,6 +402,59 @@ When adding or modifying tests:
 
 Same as parent project (ERPNext NofUI)
 
+
+# Allure Report for Python Tests
+
+You can run all Python tests and generate a beautiful Allure report locally using the provided script.
+
+## Automated Allure Test Runner
+
+A helper script is available at the project root:
+
+**run_tests_with_report.py**
+
+This script:
+1. Cleans up old Allure results and reports
+2. Runs all tests with pytest, collecting Allure results
+3. Generates the Allure HTML report
+4. Opens the report in your default browser
+
+### Usage
+
+```bash
+
+python run_tests_with_report.py
+
+```
+
+### What it does
+- [*] Cleaning up old Allure results...
+- [*] Cleaning up old Allure report...
+- [*] Running all tests...
+- [*] Generating Allure HTML report...
+- [*] Opening Allure report in your default browser...
+
+### Prerequisites
+- Python 3.8+
+- pytest, allure-pytest installed:
+  ```bash
+  pip install pytest allure-pytest
+  ```
+- Allure CLI installed and available in your PATH:
+  - [Install Allure CLI](https://docs.qameta.io/allure/#_get_started)
+  - On Windows (recommended):
+    ```bash
+    scoop install allure
+    ```
+
+### Troubleshooting
+- If you see an error about `allure` not found, ensure Allure CLI is installed and added to your PATH.
+- If tests fail, check the output for details.
+
+---
+
+For more details, see the main project README or contact the maintainers.
+
 ---
 
 **Last Updated**: February 2026  
