@@ -13,6 +13,29 @@
 # testing
 /coverage
 test-results/
+playwright-report/
+.pytest_cache/
+allure-results/
+allure-report/
+test_results.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+server.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # next.js
 /.next/
@@ -24,12 +47,6 @@ test-results/
 # misc
 .DS_Store
 *.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*

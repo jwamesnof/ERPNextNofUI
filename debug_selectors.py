@@ -1,10 +1,13 @@
 """Debug script to inspect actual HTML elements on the running app"""
 import time
 from playwright.sync_api import sync_playwright
+import os
 
 def inspect_page():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        headless = os.getenv("HEADLESS", "false").lower() == "true"
+        slow_mo = int(os.getenv("SLOW_MO", "0"))
+        browser = p.chromium.launch(headless=headless, slow_mo=slow_mo)
         page = browser.new_page()
         page.goto("http://localhost:3000", wait_until="networkidle")
         time.sleep(1)

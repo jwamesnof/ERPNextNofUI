@@ -39,14 +39,8 @@ export function SalesOrderSelector({
   onManualIdChange,
   disabled,
 }: SalesOrderSelectorProps) {
-  const [query, setQuery] = useState("")
-  const [search, setSearch] = useState("")
-
-  useEffect(() => {
-    const handle = setTimeout(() => setSearch(query.trim()), 350)
-    return () => clearTimeout(handle)
-  }, [query])
-
+  // Load all sales orders once (no server-side search)
+  // This prevents the input from clearing when API results arrive
   const {
     data = [],
     isLoading,
@@ -55,7 +49,7 @@ export function SalesOrderSelector({
     error,
     refetch,
     dataUpdatedAt,
-  } = useSalesOrders({ limit: 25, search }, !disabled)
+  } = useSalesOrders({ limit: 100 }, !disabled)
 
   const options = useMemo(
     () =>
@@ -73,8 +67,6 @@ export function SalesOrderSelector({
 
   const handleClear = () => {
     onChange(null)
-    setQuery("")
-    setSearch("")
     if (onManualIdChange) {
       onManualIdChange("")
     }
@@ -109,13 +101,6 @@ export function SalesOrderSelector({
 
       {isLoading && <LoadingSkeleton lines={4} />}
 
-      {!isLoading && isFetching && (
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Updating Sales Orders...
-        </div>
-      )}
-
       {!isLoading && !isError && (
         <Combobox
           label=""
@@ -123,7 +108,6 @@ export function SalesOrderSelector({
           options={options}
           value={value || undefined}
           onChange={(val) => onChange(val)}
-          onQueryChange={setQuery}
           emptyLabel="No Sales Orders match your search"
           testId="sales-order-combobox"
         />

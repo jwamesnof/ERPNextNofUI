@@ -95,6 +95,8 @@ npm --version
 # Install dependencies (if not already done)
 npm install
 
+# cd c:/Users/NofJawamis/Desktop/ERPNextNofUI/erpnextnofui && npm run dev
+
 # Install Playwright browsers (required once)
 npx playwright install
 ```
@@ -300,11 +302,22 @@ In `playwright.config.ts`:
 **Solution**: Ensure dev server is running
 ```bash
 # In one terminal
-npm run dev
+npm run dev     # cd c:/Users/NofJawamis/Desktop/ERPNextNofUI/erpnextnofui && npm run dev
 
 # In another terminal
 npm run test:ui
 ```
+
+# Terminal 1: Verify dev server is running
+curl http://localhost:3000
+
+# Terminal 2: Verify ngrok tunnel is active
+curl https://uncorpulently-subovate-emil.ngrok-free.dev
+
+# Terminal 3: Run the tests locally
+cd c:/Users/NofJawamis/Desktop/ERPNextNofUI/erpnextnofui
+export BASE_URL=https://uncorpulently-subovate-emil.ngrok-free.dev
+pytest tests/ -v --tb=short
 
 ### Issue: Tests timeout waiting for element
 **Solution**: Check selectors in `PromiseCalculatorPage.ts`
@@ -388,6 +401,59 @@ When adding or modifying tests:
 ## License
 
 Same as parent project (ERPNext NofUI)
+
+
+# Allure Report for Python Tests
+
+You can run all Python tests and generate a beautiful Allure report locally using the provided script.
+
+## Automated Allure Test Runner
+
+A helper script is available at the project root:
+
+**run_tests_with_report.py**
+
+This script:
+1. Cleans up old Allure results and reports
+2. Runs all tests with pytest, collecting Allure results
+3. Generates the Allure HTML report
+4. Opens the report in your default browser
+
+### Usage
+
+```bash
+
+python run_tests_with_report.py
+
+```
+
+### What it does
+- [*] Cleaning up old Allure results...
+- [*] Cleaning up old Allure report...
+- [*] Running all tests...
+- [*] Generating Allure HTML report...
+- [*] Opening Allure report in your default browser...
+
+### Prerequisites
+- Python 3.8+
+- pytest, allure-pytest installed:
+  ```bash
+  pip install pytest allure-pytest
+  ```
+- Allure CLI installed and available in your PATH:
+  - [Install Allure CLI](https://docs.qameta.io/allure/#_get_started)
+  - On Windows (recommended):
+    ```bash
+    scoop install allure
+    ```
+
+### Troubleshooting
+- If you see an error about `allure` not found, ensure Allure CLI is installed and added to your PATH.
+- If tests fail, check the output for details.
+
+---
+
+For more details, see the main project README or contact the maintainers.
 
 ---
 

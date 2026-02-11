@@ -9,6 +9,9 @@ Encapsulates all interactions with the Promise Calculator page:
 Follows POM pattern: selectors as attributes, methods return self for chaining
 """
 
+import os
+import re
+import time
 from playwright.sync_api import Page, expect
 from tests.pages.base_page import BasePage
 
@@ -63,7 +66,8 @@ class PromiseCalculatorPage(BasePage):
             expect(heading).to_be_visible()
         except:
             # If heading not found, just verify page loaded by checking for basic element
-            expect(self.page).to_have_url("http://localhost:3000")
+            base_url = os.environ.get("BASE_URL", "http://localhost:3000").rstrip("/")
+            expect(self.page).to_have_url(re.compile(rf"^{re.escape(base_url)}/?$"))
         return self
 
     def verify_sidebar_visible(self) -> "PromiseCalculatorPage":
@@ -88,6 +92,72 @@ class PromiseCalculatorPage(BasePage):
         self.verify_page_loaded()
         return self
 
+    def wait_for_api_connected(self, timeout: int = 10000) -> "PromiseCalculatorPage":
+        """Wait for API connected badge to appear."""
+        api_connected = self.page.get_by_text(self.API_CONNECTED_TEXT).first
+        expect(api_connected).to_be_visible(timeout=timeout)
+        return self
+
+    def wait_for_sales_order_combobox_input(self, timeout: int = 15000):
+        """Wait for Sales Order combobox input to be available, retrying if needed."""
+        end_time = time.time() + (timeout / 1000)
+        
+        attempts = 0
+        while time.time() < end_time:
+            attempts += 1
+            
+            # Check for error banner and handle retries
+            try:
+                error_banner = self.page.get_by_text("Failed to load Sales Orders")
+                if error_banner.count() > 0:
+                    print(f"[DEBUG] Attempt {attempts}: Found error banner, clicking Retry")
+                    retry_button = self.page.get_by_role("button", name="Retry").first
+                    try:
+                        retry_button.wait_for(state="visible", timeout=3000)
+                        retry_button.click()
+                        self.page.wait_for_timeout(2000)  # Wait longer after retry
+                    except:
+                        pass
+                    continue
+            except Exception:
+                pass
+            
+            # Wait for loading skeleton to disappear
+            try:
+                loading_skeleton = self.page.get_by_test_id("loading-skeleton")
+                if loading_skeleton.count() > 0:
+                    print(f"[DEBUG] Attempt {attempts}: Loading skeleton found, waiting for it to disappear")
+                    loading_skeleton.first.wait_for(state="hidden", timeout=3000)
+            except Exception:
+                pass
+            
+            # Look for the combobox container
+            try:
+                combobox_container = self.page.locator('[data-testid="sales-order-combobox"]').first
+                combobox_container.wait_for(state="visible", timeout=3000)
+                
+                # Wait a bit for the component to fully render
+                self.page.wait_for_timeout(500)
+                
+                # Now find the input inside
+                combobox_input = combobox_container.locator('input[type="text"]').first
+                combobox_input.wait_for(state="visible", timeout=3000)
+                
+                # Verify placeholder text to ensure it's the right combobox
+                placeholder = combobox_input.get_attribute("placeholder") or ""
+                if "Sales Order" in placeholder:
+                    print(f"[DEBUG] Attempt {attempts}: Found combobox with correct placeholder")
+                    return combobox_input
+                else:
+                    print(f"[DEBUG] Attempt {attempts}: Found input but wrong placeholder: '{placeholder}'")
+            except Exception as e:
+                print(f"[DEBUG] Attempt {attempts}: Error finding combobox: {str(e)}")
+                pass
+            
+            self.page.wait_for_timeout(500)
+
+        raise AssertionError(f"Sales Orders combobox not available after {attempts} attempts over {timeout}ms")
+
     def switch_to_manual_mode(self) -> "PromiseCalculatorPage":
         """Switch to Manual Order mode."""
         self.click(self.MANUAL_MODE_BUTTON)
@@ -102,8 +172,23 @@ class PromiseCalculatorPage(BasePage):
 
     def switch_to_sales_order_mode(self) -> "PromiseCalculatorPage":
         """Switch to From Sales Order ID mode."""
-        self.click(self.SALES_ORDER_MODE_BUTTON)
-        self.page.wait_for_timeout(500)
+        # Wait for button to be visible and clickable
+        so_button = self.page.locator(self.SALES_ORDER_MODE_BUTTON).first
+        expect(so_button).to_be_visible(timeout=3000)
+        expect(so_button).to_be_enabled(timeout=3000)
+
+        # Retry the mode switch to handle hydration timing
+        for attempt in range(3):
+            so_button.click()
+            self.page.wait_for_timeout(300)
+            try:
+                self.wait_for_sales_order_combobox_input(timeout=3000)
+                return self
+            except AssertionError:
+                if attempt == 2:
+                    raise
+                self.page.wait_for_timeout(500)
+
         return self
 
     def fill_customer(self, customer_name: str) -> "PromiseCalculatorPage":
@@ -148,47 +233,6 @@ class PromiseCalculatorPage(BasePage):
         toggle = self.page.get_by_role("button", name="Delivery Settings")
         if toggle.is_visible():
             toggle.click()
-            self.page.wait_for_timeout(300)
-        return self
-
-    def open_date_picker(self) -> "PromiseCalculatorPage":
-        """Open the desired delivery date picker."""
-        self.open_delivery_settings()
-        date_button = self.page.locator(self.DESIRED_DATE_BUTTON)
-        if date_button.is_visible():
-            date_button.click()
-            self.page.wait_for_timeout(300)
-        return self
-
-    def remove_item_at_index(self, index: int = 0) -> "PromiseCalculatorPage":
-        """Remove item from items list by index."""
-        remove_buttons = self.page.locator(self.REMOVE_ITEM_BUTTON)
-        if remove_buttons.count() > index:
-            remove_buttons.nth(index).click()
-            self.page.wait_for_timeout(300)
-        return self
-
-    def get_items_list_count(self) -> int:
-        """Get count of items in items list."""
-        return self.page.locator(self.ITEMS_LIST_ITEM).count()
-
-    def verify_item_in_list(self, item_code: str) -> bool:
-        """Verify item code is in items list."""
-        items_list = self.page.locator(self.ITEMS_LIST)
-        return item_code in items_list.inner_text()
-
-    def evaluate_promise(self) -> "PromiseCalculatorPage":
-        """Click Evaluate Promise button."""
-        evaluate_btn = self.page.get_by_role("button", name=self.EVALUATE_PROMISE_BUTTON_TEXT)
-        if evaluate_btn.is_visible():
-            evaluate_btn.click()
-            self.page.wait_for_timeout(500)
-        return self
-
-    def wait_for_results(self, timeout: int = 10000) -> "PromiseCalculatorPage":
-        """Wait for results section to be visible."""
-        results_label = self.page.get_by_text(self.PROMISE_DATE_LABEL).first
-        results_label.wait_for(state="visible", timeout=timeout)
         return self
 
     def get_promise_date(self) -> str:

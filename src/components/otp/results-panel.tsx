@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PromiseResponse } from '@/lib/api/otpClient';
+import { getWeekendLabel, getWorkweekLabel } from "@/lib/weekend"
 
 interface ResultsPanelProps {
   result: PromiseResponse | null;
@@ -28,7 +29,6 @@ interface ResultsPanelProps {
 export function ResultsPanel({ result, isLoading }: ResultsPanelProps) {
   const [showExplanation, setShowExplanation] = useState(false);
   const [showCustomerMessage, setShowCustomerMessage] = useState(false);
-import { getWeekendLabel, getWorkweekLabel } from "@/lib/weekend"
   const [messageTone, setMessageTone] = useState<'formal' | 'friendly'>('formal');
   const [messageCopied, setMessageCopied] = useState(false);
 

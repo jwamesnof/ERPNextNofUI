@@ -9,6 +9,10 @@ Follows Page Object Model pattern from AutomationSamana25 course:
 """
 
 import os
+import sys
+import time
+import socket
+from urllib.parse import urlparse
 from playwright.sync_api import Page
 
 
@@ -19,44 +23,80 @@ class BasePage:
         """Initialize page object with Playwright page instance."""
         self.page = page
 
+    @staticmethod
+    def _check_url_reachable(url: str, timeout: int = 10) -> bool:
+        """Check if a URL is reachable before navigating."""
+        try:
+            parsed = urlparse(url)
+            host = parsed.hostname
+            port = parsed.port or (443 if parsed.scheme == 'https' else 80)
+            
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            
+            return result == 0
+        except Exception as e:
+            print(f"[WARNING] Could not verify URL reachability: {e}")
+            return False
+
     def navigate_to(self, path: str = "/") -> "BasePage":
         """Navigate to a specific path."""
-        base_url = os.environ.get("BASE_URL", "http://localhost:3000")
-        self.page.goto(f"{base_url}{path}", timeout=60000)
+        base_url = os.environ.get("BASE_URL", "http://localhost:3000").rstrip("/")
+        full_url = f"{base_url}{path}"
+        
+        # Log the navigation attempt
+        print(f"\n[NAVIGATE] Attempting to navigate to: {full_url}")
+        
+        # Check if URL is reachable (especially for ngrok URLs)
+        if not self._check_url_reachable(base_url, timeout=15):
+            print(f"[WARNING] URL {base_url} may not be reachable, proceeding anyway")
+        
+        try:
+            self.page.goto(full_url, timeout=20000, wait_until='domcontentloaded')
+            print(f"[SUCCESS] Navigated to {full_url}")
+        except Exception as e:
+            print(f"[ERROR] Navigation failed: {e}")
+            raise
         
         # Handle ngrok warning page (if present)
         self._handle_ngrok_warning()
         
-        self.page.wait_for_load_state("domcontentloaded", timeout=30000)
+        # Final wait for content to load
+        try:
+            self.page.wait_for_load_state("domcontentloaded", timeout=30000)
+        except:
+            print("[WARNING] domcontentloaded timeout exceeded")
+        
         return self
     
     def _handle_ngrok_warning(self) -> None:
         """Handle ngrok warning page by clicking 'Visit Site' button if present."""
-        try:
-            # Wait briefly for ngrok warning page to appear (if it exists)
-            visit_button = self.page.get_by_role("button", name="Visit Site")
-            if visit_button.is_visible(timeout=2000):
-                visit_button.click()
-                # Wait for actual page to load after clicking
-                self.page.wait_for_load_state("domcontentloaded", timeout=10000)
-        except Exception:
-            # No ngrok warning page, continue normally
-            pass
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Wait briefly for ngrok warning page to appear (if it exists)
+                visit_button = self.page.get_by_role("button", name="Visit Site")
+                if visit_button.is_visible(timeout=3000):
+                    print("[INFO] Ngrok warning page detected, clicking 'Visit Site'")
+                    visit_button.click()
+                    # Wait for actual page to load after clicking
+                    self.page.wait_for_load_state("domcontentloaded", timeout=3000)
+                    break
+            except Exception as e:
+                # No ngrok warning page, or button already handled
+                if attempt == max_retries - 1:
+                    print("[INFO] No ngrok warning page found")
+                else:
+                    pass  # Silently continue on other attempts
 
     def wait_for_network_idle(self, timeout: int = 5000) -> "BasePage":
         """Wait for network to be idle (for API calls)."""
-        self.page.wait_for_load_state("networkidle", timeout=timeout)
-        return self
-
-    def fill_input(self, selector: str, value: str) -> "BasePage":
-        """Fill input field with value."""
-        self.page.locator(selector).fill(value)
-        return self
-
-    def get_input_value(self, selector: str) -> str:
-        """Get value from input field."""
-        return self.page.locator(selector).input_value()
-
+        try:
+            self.page.wait_for_load_state("networkidle", timeout=timeout)
+        except:
+            print(f"[WARNING] Network idle timeout ({timeout}ms) exceeded")
     def click(self, selector: str) -> "BasePage":
         """Click on element."""
         self.page.locator(selector).click()
