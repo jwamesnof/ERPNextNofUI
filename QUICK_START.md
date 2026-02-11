@@ -28,6 +28,18 @@ cat .env.local
 npm run dev
 ```
 
+#### Testing ###: 
+
+# all the tests with allure:
+pytest tests/ --alluredir=allure-results  
+
+# test just components:
+pytest tests/test_components.py --alluredir=allure-results
+
+# test just journeys:
+pytest tests/test_journeys.py --alluredir=allure-results
+
+
 **Visit**: [http://localhost:3000](http://localhost:3000)
 
 **What to try:**
@@ -354,3 +366,4 @@ USE_MOCK_SUPPLY=false
 **More help:**
 - See [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) for detailed troubleshooting
 - Check [../ERPNextNof/FRONTEND_INTEGRATION.md](../ERPNextNof/FRONTEND_INTEGRATION.md) for backend issues
+
