@@ -28,6 +28,7 @@ interface ResultsPanelProps {
 export function ResultsPanel({ result, isLoading }: ResultsPanelProps) {
   const [showExplanation, setShowExplanation] = useState(false);
   const [showCustomerMessage, setShowCustomerMessage] = useState(false);
+import { getWeekendLabel, getWorkweekLabel } from "@/lib/weekend"
   const [messageTone, setMessageTone] = useState<'formal' | 'friendly'>('formal');
   const [messageCopied, setMessageCopied] = useState(false);
 
@@ -388,8 +389,8 @@ export function ResultsPanel({ result, isLoading }: ResultsPanelProps) {
                   <Calendar className="w-4 h-4" /> Calendar & Rules
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
-                  <p>Workweek: Sunday–Thursday</p>
-                  <p>Weekend skipped: Friday, Saturday</p>
+                    <p>Workweek: {getWorkweekLabel()}</p>
+                    <p>Weekend skipped: {getWeekendLabel()}</p>
                   <p>Cutoff time: 14:00</p>
                   <p>Buffer days: +1 day</p>
                 </div>

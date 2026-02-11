@@ -215,14 +215,9 @@ export class APIClient {
   async evaluatePromise(request: PromiseEvaluateRequest): Promise<PromiseEvaluateResponse> {
     if (this.mockMode) {
       console.log("[OTP Client] Mock: evaluatePromise", request)
-      // Simulate realistic outcomes for demo
-      const responses = [
-        MOCK_PROMISE_RESPONSE_SUCCESS,
-        MOCK_PROMISE_RESPONSE_PARTIAL_STOCK,
-        MOCK_PROMISE_RESPONSE_CANNOT_FULFILL,
-        getRandomMockResponse(),
-      ]
-      const response = responses[Math.floor(Math.random() * responses.length)]
+      // Return mode-specific mock response
+      const deliveryMode = request.rules?.desired_date_mode
+      const response = getRandomMockResponse(deliveryMode)
       return new Promise((resolve) => setTimeout(() => resolve(response), 800))
     }
 

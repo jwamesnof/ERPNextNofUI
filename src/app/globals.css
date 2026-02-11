@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-day-picker/dist/style.css";
 
 :root {
   --background: #ffffff;
@@ -24,16 +25,43 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-/* Calendar styling for Israel weekend (Friday + Saturday) */
-/* Note: Native HTML date picker styling is limited and browser-dependent.
-   These styles provide visual cues but may not affect the native calendar UI.
-   The helper text below the input is the primary indicator. */
-.weekend-calendar {
-  /* Add visual indicator that weekends are Friday+Saturday */
-  position: relative;
+/**
+ * Calendar styling for Israel weekend (Friday + Saturday)
+ * 
+ * Note: Native HTML date picker styling is limited and browser-dependent.
+ * The visual highlighting in the native picker may vary by browser.
+ * The helper text displayed next to the input is the primary indicator.
+ */
+
+/* Helper text styling for weekend clarification */
+.weekend-helper-text {
+  font-size: 0.75rem;
+  color: rgb(100, 116, 139);
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
-/* For browsers that support custom date picker styling */
-.weekend-calendar::-webkit-calendar-picker-indicator {
-  cursor: pointer;
+/* DayPicker overrides */
+.otp-day-picker {
+  --rdp-accent-color: #2563eb;
+  --rdp-background-color: #eff6ff;
+  --rdp-outline: 2px solid #2563eb;
+}
+
+.otp-day-picker .rdp-day_today {
+  border: 1px solid #94a3b8;
+}
+
+.otp-day-picker .rdp-day_selected,
+.otp-day-picker .rdp-day_selected:focus-visible,
+.otp-day-picker .rdp-day_selected:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.otp-weekend-day {
+  color: #dc2626;
+  font-weight: 600;
 }

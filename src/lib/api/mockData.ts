@@ -6,8 +6,9 @@
  * Scenarios:
  * - SUCCESS: All items in stock, early delivery possible
  * - PARTIAL_STOCK: Mix of stock + incoming POs
+ * - NO_EARLY_DELIVERY: Promise adjusted to avoid early delivery
  * - CANNOT_FULFILL: Insufficient supply
- * - STRICT_FAIL: Reliability check fails
+ * - STRICT_FAIL: Strict mode rejects late deliveries
  */
 
 import type { PromiseEvaluateResponse, HealthCheckResponse } from "./types"
@@ -126,6 +127,42 @@ export const MOCK_PROMISE_RESPONSE_PARTIAL_STOCK: PromiseEvaluateResponse = {
   options: [],
 }
 
+export const MOCK_PROMISE_RESPONSE_NO_EARLY_DELIVERY: PromiseEvaluateResponse = {
+  status: "OK",
+  promise_date: "2026-02-15",
+  promise_date_raw: "2026-02-08",
+  desired_date: "2026-02-15",
+  desired_date_mode: "NO_EARLY_DELIVERY",
+  on_time: true,
+  adjusted_due_to_no_early_delivery: true,
+  can_fulfill: true,
+  confidence: "HIGH",
+  plan: [
+    {
+      item_code: "SKU001",
+      qty_required: 30,
+      fulfillment: [
+        {
+          source: "stock",
+          qty: 30,
+          available_date: "2026-02-05",
+          ship_ready_date: "2026-02-15",
+          warehouse: "Stores - SD",
+        },
+      ],
+      shortage: 0,
+    },
+  ],
+  reasons: [
+    "All items available in stock by 2026-02-05",
+    "Raw promise date: 2026-02-08",
+    "No Early Delivery mode: Promise adjusted to 2026-02-15 to match desired date",
+    "Prevents early delivery and associated storage costs",
+  ],
+  blockers: [],
+  options: [],
+}
+
 export const MOCK_PROMISE_RESPONSE_CANNOT_FULFILL: PromiseEvaluateResponse = {
   status: "CANNOT_FULFILL",
   promise_date: "2026-03-15",
@@ -153,7 +190,7 @@ export const MOCK_PROMISE_RESPONSE_CANNOT_FULFILL: PromiseEvaluateResponse = {
 }
 
 export const MOCK_PROMISE_RESPONSE_STRICT_FAIL: PromiseEvaluateResponse = {
-  status: "CANNOT_PROMISE_RELIABLY",
+  status: "CANNOT_FULFILL",
   promise_date: null,
   desired_date: "2026-02-10",
   desired_date_mode: "STRICT_FAIL",
@@ -162,17 +199,20 @@ export const MOCK_PROMISE_RESPONSE_STRICT_FAIL: PromiseEvaluateResponse = {
   can_fulfill: false,
   confidence: "LOW",
   plan: [],
-  reasons: [],
+  reasons: [
+    "Earliest feasible delivery: 2026-02-15 (5 days late)",
+    "STRICT_FAIL mode rejects late deliveries",
+  ],
   blockers: [
-    "STRICT_FAIL mode: Cannot promise reliably for desired date",
-    "Risk of non-fulfillment exceeds threshold",
+    "Strict Fail mode: Cannot meet desired date of 2026-02-10",
+    "Supply constraints prevent on-time delivery",
   ],
   options: [
-    { type: "expedite_po", description: "Use LATEST_ACCEPTABLE for flexible date" },
-    { type: "backorder", description: "Pay premium for expedited supply" },
+    { type: "expedite_po", description: "Switch to LATEST_ACCEPTABLE mode for flexible date" },
+    { type: "backorder", description: "Expedite supply for additional cost" },
   ],
   error: "Cannot fulfill with required reliability",
-  error_detail: "In STRICT_FAIL mode, we cannot promise this date",
+  error_detail: "In STRICT_FAIL mode, late deliveries are rejected",
 }
 
 export const MOCK_HEALTH_CHECK: HealthCheckResponse = {
@@ -184,8 +224,18 @@ export const MOCK_HEALTH_CHECK: HealthCheckResponse = {
 
 /**
  * Helper to get a random mock response for demo purposes
+ * Varies by delivery mode if specified in request
  */
-export function getRandomMockResponse(): PromiseEvaluateResponse {
+export function getRandomMockResponse(deliveryMode?: string): PromiseEvaluateResponse {
+  // Return mode-specific responses when mode is specified
+  if (deliveryMode === 'NO_EARLY_DELIVERY') {
+    return MOCK_PROMISE_RESPONSE_NO_EARLY_DELIVERY
+  }
+  if (deliveryMode === 'STRICT_FAIL') {
+    return Math.random() > 0.5 ? MOCK_PROMISE_RESPONSE_SUCCESS : MOCK_PROMISE_RESPONSE_STRICT_FAIL
+  }
+  
+  // Default: random response for LATEST_ACCEPTABLE or unspecified mode
   const responses = [
     MOCK_PROMISE_RESPONSE_SUCCESS,
     MOCK_PROMISE_RESPONSE_PARTIAL_STOCK,

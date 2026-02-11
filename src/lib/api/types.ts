@@ -61,6 +61,7 @@ export interface PromiseRules {
   lead_time_buffer_days?: number             // Default: 1
   processing_lead_time_days?: number         // Default: 1
   desired_date_mode?: DeliveryMode           // Default: "LATEST_ACCEPTABLE"
+  order_created_at?: string      // ISO datetime (YYYY-MM-DDTHH:mm), optional
 }
 
 // ============================================================================
@@ -229,6 +230,9 @@ export interface SalesOrderDetailItem {
   item_code?: string
   qty?: number
   warehouse?: string
+  stock_actual?: number
+  stock_reserved?: number
+  stock_available?: number
 }
 
 export interface SalesOrderDefaults {

@@ -147,6 +147,11 @@ export function PromiseSummaryCard({ result }: PromiseSummaryCardProps) {
               )}
             </div>
           )}
+          {result.desired_date_mode && (
+            <div className="mt-2 text-xs text-slate-500">
+              Mode: <span className="font-medium text-slate-700">{result.desired_date_mode.replace(/_/g, ' ')}</span>
+            </div>
+          )}
         </div>
       )}
 

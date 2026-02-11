@@ -303,9 +303,9 @@ See [../ERPNextNof/API_CONTRACT.md](../ERPNextNof/API_CONTRACT.md) for complete 
 
 **Terminal 1 - Backend:**
 ```bash
-cd ../ERPNextNof
+cd ../ERPNextNof   #cd "c:\Users\NofJawamis\Desktop\ERPNextNofUI\erpnextnofui" && source .venv/Scripts/activate && python --version
 python -m venv venv
-source venv/bin/activate
+source .venv/Scripts/activate
 pip install -r requirements.txt
 python -m uvicorn src.main:app --reload --port 8001
 ```

@@ -1,0 +1,175 @@
+name: Playwright UI Tests with Allure
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: 'Application URL (use ngrok URL for local testing, or leave empty for local dev server). Current ngrok: https://uncorpulently-subovate-emil.ngrok-free.dev'
+        required: false
+        default: 'https://uncorpulently-subovate-emil.ngrok-free.dev'
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: write
+  checks: write
+
+jobs:
+  playwright-matrix-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        browser: [chrome, firefox]
+        resolution: 
+          - { name: 'desktop', width: 1920, height: 1080 }
+          - { name: 'tablet', width: 768, height: 1024 }
+          - { name: 'mobile', width: 375, height: 667 }
+      fail-fast: false  # Continue other jobs even if one fails
+    
+    name: Test ${{ matrix.browser }} - ${{ matrix.resolution.name }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install npm dependencies
+      run: npm install
+
+    - name: Build Next.js application
+      run: npm run build
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install Playwright browsers
+      run: playwright install --with-deps ${{ matrix.browser }}
+
+    - name: Determine App URL
+      id: app_url
+      run: |
+        APP_URL="${{ github.event.inputs.app_url }}"
+        
+        # If localhost, use local mode (start dev server)
+        if [[ "$APP_URL" == *"localhost"* ]]; then
+          echo "url=http://localhost:3000" >> $GITHUB_OUTPUT
+          echo "use_local=true" >> $GITHUB_OUTPUT
+          echo "Using LOCAL dev server mode"
+        # If ngrok URL or other, use remote mode (don't start dev server)
+        else
+          echo "url=$APP_URL" >> $GITHUB_OUTPUT
+          echo "use_local=false" >> $GITHUB_OUTPUT
+          echo "Using NGROK tunnel mode: $APP_URL"
+        fi
+
+    - name: Start Next.js dev server (local mode only)
+      if: steps.app_url.outputs.use_local == 'true'
+      run: npm run dev > /tmp/dev-server.log 2>&1 &
+      env:
+        NODE_ENV: development
+
+    - name: Wait for dev server to start (local mode only)
+      if: steps.app_url.outputs.use_local == 'true'
+      run: |
+        for i in {1..30}; do
+          if curl -s http://localhost:3000 > /dev/null; then
+            echo "Dev server is ready"
+            exit 0
+          fi
+          echo "Waiting for dev server... ($i/30)"
+          sleep 2
+        done
+        echo "Dev server failed to start"
+        cat /tmp/dev-server.log
+        exit 1
+
+    - name: Wait for ngrok tunnel (ngrok mode only)
+      if: steps.app_url.outputs.use_local == 'false'
+      run: |
+        for i in {1..15}; do
+          if curl -s -k "${{ steps.app_url.outputs.url }}" > /dev/null 2>&1; then
+            echo "Ngrok tunnel is ready"
+            exit 0
+          fi
+          echo "Waiting for ngrok tunnel... ($i/15)"
+          sleep 2
+        done
+        echo "Ngrok tunnel not accessible"
+        exit 1
+        
+    - name: Run Playwright tests with Allure
+      env:
+        HEADLESS: true
+        BROWSER: ${{ matrix.browser }}
+        SCREEN_WIDTH: ${{ matrix.resolution.width }}
+        SCREEN_HEIGHT: ${{ matrix.resolution.height }}
+        BASE_URL: ${{ steps.app_url.outputs.url }}
+        TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
+      run: |
+        python -m pytest tests/ -v --tb=short --alluredir=allure-results
+    
+    - name: Create environment properties
+      if: always()
+      run: |
+        mkdir -p allure-results
+        echo "Browser=${{ matrix.browser }}" >> allure-results/environment.properties
+        echo "Resolution=${{ matrix.resolution.name }} (${{ matrix.resolution.width }}x${{ matrix.resolution.height }})" >> allure-results/environment.properties
+        echo "Python.Version=$(python --version | cut -d' ' -f2)" >> allure-results/environment.properties
+        echo "Test.Execution.Date=$(date +'%Y-%m-%d %H:%M:%S')" >> allure-results/environment.properties
+        echo "APP_URL=${{ steps.app_url.outputs.url }}" >> allure-results/environment.properties
+        echo "Mode=${{ steps.app_url.outputs.use_local == 'true' && 'Local Dev Server' || 'Ngrok Tunnel' }}" >> allure-results/environment.properties
+    
+    - name: Upload Allure results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-results-${{ matrix.browser }}-${{ matrix.resolution.name }}
+        path: allure-results
+        retention-days: 7
+
+  report:
+    needs: playwright-matrix-tests
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Download all Allure results
+      uses: actions/download-artifact@v4
+      with:
+        path: allure-results-all
+        pattern: allure-results-*
+        merge-multiple: true
+   
+    - name: Generate Allure Report
+      uses: simple-elf/allure-report-action@master
+      with:
+        allure_results: allure-results-all
+        allure_history: allure-history
+        keep_reports: 20
+    
+    - name: Publish Allure Report to GitHub Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: allure-history
